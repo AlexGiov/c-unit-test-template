@@ -1,0 +1,28 @@
+{
+    "files.associations": {
+        "cmocka.h": "c",
+        "setjmp.h": "c",
+        "stddef.h": "c",
+        "stdarg.h": "c",
+        "*.template": "c",
+        "fsal_cfg.h": "c",
+        "stdbool.h": "c",
+        "r1up_file_cfg.h": "c",
+        "fsal.h": "c",
+        "r1up_file.h": "c",
+        "type_traits": "c",
+        "typeinfo": "c"
+    },
+    // --- AlexGiov: added for clang-format ---
+    "[c]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "editor.formatOnSave": true,
+    // Clang-format configuration
+    "clang-format.executable": "C:\\Program Files\\LLVM\\bin\\clang-format.exe",
+    "clang-format.style": "file",
+    "clang-format.fallbackStyle": "LLVM"
+}
