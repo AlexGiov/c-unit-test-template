@@ -92,6 +92,37 @@ unit_test_template/
 
 ## 🛠️ Usage as Template
 
+### Automatic Rename (Recommended)
+
+```powershell
+# 1. Clone this template
+git clone <repo-url> my-new-library
+cd my-new-library
+
+# 2. Run rename script
+.\rename-library.ps1 -NewName "sensor_driver"
+
+# 3. Build and test
+.\build.ps1 -Clean -RunTests
+
+# 4. Implement your library code
+#    - Edit src/sensor_driver.c
+#    - Edit include/sensor_driver/sensor_driver.h
+#    - Write tests in test/unit/test_sensor_driver.c
+```
+
+The rename script automatically:
+- ✅ Renames all directories and files
+- ✅ Updates CMakeLists.txt files
+- ✅ Updates all `#include` statements
+- ✅ Updates README.md references
+- ✅ Updates test file contents
+
+### Manual Rename (Alternative)
+
+<details>
+<summary>Click to expand manual steps</summary>
+
 ### 1. Clone and Customize
 
 ```bash
@@ -129,6 +160,8 @@ test/unit/test_your_module.c
 ```powershell
 .\build.ps1 -RunTests
 ```
+
+</details>
 
 ## 📊 Code Coverage
 
