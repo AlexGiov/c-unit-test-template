@@ -90,16 +90,18 @@ unit_test_template/
 └── CMakeLists.txt          # Main build configuration
 ```
 
-## 🛠️ Usage as Template
+## 🛠️ Renaming the Template Library
 
-### Automatic Rename (Recommended)
+### Simple Automatic Rename ✨ (Recommended)
+
+Thanks to CMake's `${PROJECT_NAME}` pattern, renaming is now **much simpler**:
 
 ```powershell
 # 1. Clone this template
 git clone <repo-url> my-new-library
 cd my-new-library
 
-# 2. Run rename script
+# 2. Run rename script - it's now much faster and simpler!
 .\rename-library.ps1 -NewName "sensor_driver"
 
 # 3. Build and test
@@ -111,17 +113,116 @@ cd my-new-library
 #    - Write tests in test/unit/test_sensor_driver.c
 ```
 
-The rename script automatically:
-- ✅ Renames all directories and files
-- ✅ Updates CMakeLists.txt files
-- ✅ Updates all `#include` statements
-- ✅ Updates README.md references
-- ✅ Updates test file contents
+**What the script does (simplified):**
+1. ✅ Changes `project(mylib)` → `project(sensor_driver)` in CMakeLists.txt
+2. ✅ Renames `include/mylib/` → `include/sensor_driver/`
+3. ✅ Renames source files: `math_utils.*` → `sensor_driver.*`
+4. ✅ Updates `#include` statements in C files
+5. ✅ Updates README.md references
 
-### Manual Rename (Alternative)
+**What happens automatically (via `${PROJECT_NAME}`):**
+- ✨ All CMake library targets
+- ✨ All install paths and exports
+- ✨ Package configuration files
+- ✨ Test linkage
+
+**Key Insight:** Because CMakeLists.txt now uses `${PROJECT_NAME}` everywhere, you only need to change the `project()` declaration and the rest updates automatically!
+
+### Manual Rename (If You Prefer)
 
 <details>
 <summary>Click to expand manual steps</summary>
+
+If you prefer to do it manually:
+
+### 1. Update CMakeLists.txt
+
+```cmake
+# Change only this line:
+project(mylib VERSION 1.0.0 LANGUAGES C)  
+# to:
+project(your_library_name VERSION 1.0.0 LANGUAGES C)
+
+# Everything else updates automatically via ${PROJECT_NAME}!
+```
+
+### 2. Rename Directories and Files
+
+```powershell
+# Rename include directory
+mv include/mylib include/your_library_name
+
+# Rename source files (if single-module library)
+mv src/math_utils.c src/your_library_name.c
+mv include/your_library_name/math_utils.h include/your_library_name/your_library_name.h
+mv test/unit/test_math_utils.c test/unit/test_your_library_name.c
+```
+
+### 3. Update #include Statements
+
+```c
+// In src/your_library_name.c
+#include "your_library_name/your_library_name.h"
+
+// In test/unit/test_your_library_name.c
+#include "your_library_name/your_library_name.h"
+```
+
+### 4. Update README.md
+
+Replace all references to `mylib` with `your_library_name`.
+
+</details>
+
+## 💡 Template Design Philosophy
+
+This template follows **CMake best practices** for relocatable packages:
+
+- **Single Source of Truth**: Library name defined once in `project()` declaration
+- **Variable-Based Configuration**: All targets/paths use `${PROJECT_NAME}` variable
+- **Auto-Derived Values**: `${PROJECT_NAME_UPPER}` generated automatically
+- **Minimal Renaming**: Only need to change project name + rename directories/files
+- **Professional Structure**: Follows cmake-packages(7) documentation patterns
+
+### File Naming Convention
+
+For **single-module libraries** (most common):
+- Use: `src/${PROJECT_NAME}.c` and `include/${PROJECT_NAME}/${PROJECT_NAME}.h`
+- Example: `sensor_driver` → `src/sensor_driver.c`
+
+For **multi-module libraries**:
+- Use descriptive module names
+- Example: `uart_driver` → `src/uart_tx.c`, `src/uart_rx.c`, `src/uart_config.c`
+
+### How It Works Under the Hood
+
+The template leverages CMake variables for maximum flexibility:
+
+```cmake
+# In CMakeLists.txt - Single source of truth:
+project(mylib VERSION 1.0.0 LANGUAGES C)
+
+# Auto-derived variable:
+string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
+
+# All targets use variables:
+add_library(${PROJECT_NAME} ...)
+target_include_directories(${PROJECT_NAME} ...)
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets ...)
+
+# Install paths use variables:
+install(DIRECTORY include/${PROJECT_NAME}/ ...)
+install(FILES ... DESTINATION cmake/${PROJECT_NAME})
+```
+
+This means changing `project(mylib)` to `project(your_lib)` automatically updates:
+- Library target name
+- All install paths
+- Export configurations  
+- Package configs
+- Test linkage (via inherited `${LIB_NAME}`)
+
+## 🔧 Usage
 
 ### 1. Clone and Customize
 

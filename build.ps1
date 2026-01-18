@@ -71,6 +71,32 @@ $CMAKE_GENERATOR = "MinGW Makefiles"  # Default, widely available
 $CMAKE_PATH = "C:\devbin\cmake\v3.16.5\bin"
 $GCC_PATH = "C:/devbin/mingw/mingw64/8.1.0/bin/gcc.exe"
 
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
+
+# Extract project name from CMakeLists.txt
+function Get-ProjectName {
+    if (Test-Path "CMakeLists.txt") {
+        $content = Get-Content "CMakeLists.txt" -Raw
+        if ($content -match 'project\s*\(\s*(\w+)') {
+            return $Matches[1]
+        }
+    }
+    return $null
+}
+
+# Extract project name from CMake cache (after configuration)
+function Get-ProjectNameFromCache {
+    if (Test-Path "build/CMakeCache.txt") {
+        $cacheLine = Get-Content "build/CMakeCache.txt" | Select-String "CMAKE_PROJECT_NAME:STATIC=(.+)"
+        if ($cacheLine) {
+            return $cacheLine.Matches.Groups[1].Value
+        }
+    }
+    return $null
+}
+
 # Setup environment
 $env:PATH = "$CMAKE_PATH;$env:PATH"
 
@@ -138,18 +164,33 @@ Write-Host ""
 # Run tests if requested
 if ($RunTests) {
     Write-Host "[TEST] Running unit tests..." -ForegroundColor Yellow
-    Write-Host ""
     
-    & ".\bin\test_math_utils.exe"
+    # Auto-detect test executables in bin/ directory
+    $testExecutables = Get-ChildItem "bin\test_*.exe" -ErrorAction SilentlyContinue
     
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "[ERROR] Tests failed!" -ForegroundColor Red
+    if ($testExecutables) {
+        foreach ($testExe in $testExecutables) {
+            $testPath = $testExe.FullName
+            Write-Host "  Executable: $testPath" -ForegroundColor Gray
+            Write-Host ""
+            
+            & $testPath
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host ""
+                Write-Host "[ERROR] Tests failed in $($testExe.Name)!" -ForegroundColor Red
+                exit 1
+            }
+            Write-Host ""
+        }
+        
+        Write-Host "[TEST] All tests passed!" -ForegroundColor Green
+    }
+    else {
+        Write-Host "[ERROR] No test executables found in bin/ directory" -ForegroundColor Red
+        Write-Host "  Expected: bin/test_*.exe" -ForegroundColor Gray
         exit 1
     }
-    
-    Write-Host ""
-    Write-Host "[TEST] All tests passed!" -ForegroundColor Green
 }
 
 # Coverage report if requested
@@ -178,8 +219,18 @@ Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Build Summary" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
+
+# Get project name for summary
+$projectName = Get-ProjectNameFromCache
+if (-not $projectName) {
+    $projectName = Get-ProjectName
+}
+if ($projectName) {
+    Write-Host "Project:       $projectName" -ForegroundColor White
+}
+
 Write-Host "Build Type:    $BuildType" -ForegroundColor White
-Write-Host "Output:        bin/test_math_utils.exe" -ForegroundColor White
+Write-Host "Output:        bin/" -ForegroundColor White
 Write-Host "Status:        SUCCESS" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

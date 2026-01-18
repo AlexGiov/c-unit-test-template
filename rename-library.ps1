@@ -1,7 +1,15 @@
 # ==============================================================================
 # Rename Library Script - PowerShell
 # ==============================================================================
-# Automatically renames the template library to a new name
+# Renames the template library to a new name
+# 
+# With the new CMake-based approach, renaming is much simpler:
+# - Change project() name in CMakeLists.txt (automatic via CMake variables)
+# - Rename include/ directory
+# - Rename source files (optional, recommended for single-module libraries)
+# - Update #include statements
+# - Update README references
+#
 # Usage: .\rename-library.ps1 -NewName "my_new_library"
 # ==============================================================================
 
@@ -28,14 +36,15 @@ function Show-Help {
     Write-Host "EXAMPLES:" -ForegroundColor Cyan
     Write-Host "  .\rename-library.ps1 -NewName sensor_driver" -ForegroundColor Gray
     Write-Host "  .\rename-library.ps1 -NewName uart_hal" -ForegroundColor Gray
-    Write-Host "  .\rename-library.ps1 -NewName MyLibrary" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "WHAT IT DOES:" -ForegroundColor Cyan
-    Write-Host "  1. Renames directories (include/mylib -> include/<NewName>)" -ForegroundColor Gray
-    Write-Host "  2. Renames files (math_utils.* -> <NewName>.*)" -ForegroundColor Gray
-    Write-Host "  3. Updates all references in CMakeLists.txt files" -ForegroundColor Gray
-    Write-Host "  4. Updates README.md with new library name" -ForegroundColor Gray
-    Write-Host "  5. Updates test files and file contents" -ForegroundColor Gray
+    Write-Host "WHAT IT DOES (Simplified with CMake variables):" -ForegroundColor Cyan
+    Write-Host "  1. Updates project() name in CMakeLists.txt" -ForegroundColor Gray
+    Write-Host "  2. Renames include/mylib/ -> include/<NewName>/" -ForegroundColor Gray
+    Write-Host "  3. Renames source files (recommended for single-module)" -ForegroundColor Gray
+    Write-Host "  4. Updates #include statements" -ForegroundColor Gray
+    Write-Host "  5. Updates README.md references" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  All CMake targets auto-update via \${PROJECT_NAME}!" -ForegroundColor Green
     Write-Host ""
     Write-Host "NOTE: Run this in a fresh clone of the template!" -ForegroundColor Yellow
     Write-Host ""
@@ -77,25 +86,68 @@ if (Test-Path ".git") {
     }
 }
 
-# Constants
-$OLD_NAME = "mylib"
-$OLD_NAME_UPPER = "MYLIB"
-$OLD_MODULE = "math_utils"
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
 
+function Get-CurrentProjectName {
+    # Read project name from CMakeLists.txt
+    if (Test-Path "CMakeLists.txt") {
+        $cmakeContent = Get-Content "CMakeLists.txt" -Raw
+        if ($cmakeContent -match 'project\s*\(\s*(\w+)') {
+            return $matches[1]
+        }
+    }
+    return "mylib"  # fallback default
+}
+
+function Get-CurrentModuleName {
+    # Find first .c file in src/ directory (excluding template default)
+    $srcFiles = Get-ChildItem "src\*.c" -ErrorAction SilentlyContinue
+    if ($srcFiles) {
+        $firstFile = $srcFiles[0].BaseName
+        return $firstFile
+    }
+    return "math_utils"  # fallback default
+}
+
+# ==============================================================================
+# Auto-detect current names
+# ==============================================================================
+
+$OLD_NAME = Get-CurrentProjectName
+$OLD_MODULE = Get-CurrentModuleName
+$OLD_NAME_UPPER = $OLD_NAME.ToUpper()
 $NEW_NAME_UPPER = $NewName.ToUpper()
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Library Rename Tool" -ForegroundColor Cyan
+Write-Host "  Library Rename Tool (Simplified)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Renaming library from '$OLD_NAME' to '$NewName'..." -ForegroundColor Yellow
+Write-Host "Detected current library: '$OLD_NAME' (module: '$OLD_MODULE')" -ForegroundColor Gray
+Write-Host "Renaming to: '$NewName'" -ForegroundColor Yellow
 Write-Host ""
 
 # ==============================================================================
-# STEP 1: Rename Directories
+# STEP 1: Update project() declaration in CMakeLists.txt
 # ==============================================================================
-Write-Host "[1/5] Renaming directories..." -ForegroundColor Cyan
+Write-Host "[1/4] Updating CMakeLists.txt project() declaration..." -ForegroundColor Cyan
+
+$rootCMake = Get-Content "CMakeLists.txt" -Raw
+
+# Update project() declaration - this is the ONLY change needed in CMakeLists.txt!
+# All targets, exports, and paths use ${PROJECT_NAME} so they update automatically
+$rootCMake = $rootCMake -replace "project\s*\(\s*$OLD_NAME\s", "project($NewName "
+
+Set-Content "CMakeLists.txt" -Value $rootCMake -NoNewline
+Write-Host "  - Changed project($OLD_NAME) -> project($NewName)" -ForegroundColor Green
+Write-Host "    All CMake targets auto-update via \${PROJECT_NAME}!" -ForegroundColor Gray
+
+# ==============================================================================
+# STEP 2: Rename include directory
+# ==============================================================================
+Write-Host "[2/4] Renaming include directory..." -ForegroundColor Cyan
 
 if (Test-Path "include\$OLD_NAME") {
     Write-Host "  include\$OLD_NAME -> include\$NewName" -ForegroundColor Gray
@@ -103,9 +155,9 @@ if (Test-Path "include\$OLD_NAME") {
 }
 
 # ==============================================================================
-# STEP 2: Rename Files
+# STEP 3: Rename source files (recommended for single-module libraries)
 # ==============================================================================
-Write-Host "[2/5] Renaming files..." -ForegroundColor Cyan
+Write-Host "[3/4] Renaming source files..." -ForegroundColor Cyan
 
 # Rename header file
 if (Test-Path "include\$NewName\$OLD_MODULE.h") {
@@ -126,100 +178,22 @@ if (Test-Path "test\unit\test_$OLD_MODULE.c") {
 }
 
 # ==============================================================================
-# STEP 3: Update CMakeLists.txt (root)
+# STEP 4: Update #include statements and file contents
 # ==============================================================================
-Write-Host "[3/5] Updating root CMakeLists.txt..." -ForegroundColor Cyan
-
-$rootCMake = Get-Content "CMakeLists.txt" -Raw
-
-# Replace project name
-$rootCMake = $rootCMake -replace "project\($OLD_NAME\s", "project($NewName "
-
-# Replace variable names
-$rootCMake = $rootCMake -replace "${OLD_NAME_UPPER}_SOURCES", "${NEW_NAME_UPPER}_SOURCES"
-$rootCMake = $rootCMake -replace "${OLD_NAME_UPPER}_HEADERS", "${NEW_NAME_UPPER}_HEADERS"
-
-# Replace library target
-$rootCMake = $rootCMake -replace "add_library\($OLD_NAME", "add_library($NewName"
-$rootCMake = $rootCMake -replace "target_include_directories\($OLD_NAME", "target_include_directories($NewName"
-$rootCMake = $rootCMake -replace "target_compile_options\($OLD_NAME", "target_compile_options($NewName"
-$rootCMake = $rootCMake -replace "target_link_options\($OLD_NAME", "target_link_options($NewName"
-$rootCMake = $rootCMake -replace "set_target_properties\($OLD_NAME", "set_target_properties($NewName"
-
-# Replace file references
-$rootCMake = $rootCMake -replace "src/$OLD_MODULE\.c", "src/$NewName.c"
-$rootCMake = $rootCMake -replace "include/$OLD_NAME/$OLD_MODULE\.h", "include/$NewName/$NewName.h"
-
-# Replace install paths
-$rootCMake = $rootCMake -replace "DESTINATION \`${CMAKE_INSTALL_PREFIX}/include/$OLD_NAME", "DESTINATION `${CMAKE_INSTALL_PREFIX}/include/$NewName"
-$rootCMake = $rootCMake -replace "DESTINATION \`${CMAKE_INSTALL_PREFIX}/src/$OLD_NAME", "DESTINATION `${CMAKE_INSTALL_PREFIX}/src/$NewName"
-
-# Replace install targets
-$rootCMake = $rootCMake -replace "install\(TARGETS $OLD_NAME", "install(TARGETS $NewName"
-$rootCMake = $rootCMake -replace "EXPORT ${OLD_NAME}Targets", "EXPORT ${NewName}Targets"
-$rootCMake = $rootCMake -replace "PUBLIC_HEADER DESTINATION [^\s)]+include/$OLD_NAME", "PUBLIC_HEADER DESTINATION `${CMAKE_INSTALL_INCLUDEDIR}/$NewName"
-$rootCMake = $rootCMake -replace "install\(DIRECTORY include/$OLD_NAME", "install(DIRECTORY include/$NewName"
-
-# Replace CMake export config
-$rootCMake = $rootCMake -replace "install\(EXPORT ${OLD_NAME}Targets", "install(EXPORT ${NewName}Targets"
-$rootCMake = $rootCMake -replace "FILE ${OLD_NAME}Targets\.cmake", "FILE ${NewName}Targets.cmake"
-$rootCMake = $rootCMake -replace "NAMESPACE ${OLD_NAME}::", "NAMESPACE ${NewName}::"
-$rootCMake = $rootCMake -replace "DESTINATION \`${CMAKE_INSTALL_LIBDIR}/cmake/$OLD_NAME", "DESTINATION `${CMAKE_INSTALL_LIBDIR}/cmake/$NewName"
-
-Set-Content "CMakeLists.txt" -Value $rootCMake -NoNewline
-
-# ==============================================================================
-# STEP 4: Update test/CMakeLists.txt
-# ==============================================================================
-Write-Host "[4/5] Updating test/CMakeLists.txt..." -ForegroundColor Cyan
-
-$testCMake = Get-Content "test\CMakeLists.txt" -Raw
-
-# Replace test executable name
-$testCMake = $testCMake -replace "add_executable\(test_$OLD_MODULE", "add_executable(test_$NewName"
-$testCMake = $testCMake -replace "target_link_libraries\(test_$OLD_MODULE", "target_link_libraries(test_$NewName"
-$testCMake = $testCMake -replace "set_target_properties\(test_$OLD_MODULE", "set_target_properties(test_$NewName"
-$testCMake = $testCMake -replace "target_include_directories\(test_$OLD_MODULE", "target_include_directories(test_$NewName"
-$testCMake = $testCMake -replace "target_compile_options\(test_$OLD_MODULE", "target_compile_options(test_$NewName"
-$testCMake = $testCMake -replace "target_link_options\(test_$OLD_MODULE", "target_link_options(test_$NewName"
-
-# Replace file references
-$testCMake = $testCMake -replace "unit/test_$OLD_MODULE\.c", "unit/test_$NewName.c"
-
-# Replace library target in target_link_libraries
-# Handle both inline and multiline cases
-$testCMake = $testCMake -replace "PRIVATE\s+$OLD_NAME", "PRIVATE $NewName"
-$testCMake = $testCMake -replace "(\s+)$OLD_NAME(\s+cmocka)", "`$1$NewName`$2"
-
-# Replace CTest configuration
-$testCMake = $testCMake -replace "add_test\(\s*NAME test_$OLD_MODULE", "add_test(`n    NAME test_$NewName"
-$testCMake = $testCMake -replace "COMMAND test_$OLD_MODULE", "COMMAND test_$NewName"
-$testCMake = $testCMake -replace "set_tests_properties\(test_$OLD_MODULE", "set_tests_properties(test_$NewName"
-$testCMake = $testCMake -replace "DEPENDS test_$OLD_MODULE", "DEPENDS test_$NewName"
-
-# Replace all remaining references to old module name in test file
-$testCMake = $testCMake -replace "test_$OLD_MODULE", "test_$NewName"
-$testCMake = $testCMake -replace "\b$OLD_MODULE\b", $NewName
-
-Set-Content "test\CMakeLists.txt" -Value $testCMake -NoNewline
-
-# ==============================================================================
-# STEP 5: Update File Contents
-# ==============================================================================
-Write-Host "[5/5] Updating file contents..." -ForegroundColor Cyan
+Write-Host "[4/4] Updating file contents..." -ForegroundColor Cyan
 
 # Update header file
 $headerPath = "include\$NewName\$NewName.h"
 if (Test-Path $headerPath) {
     $headerContent = Get-Content $headerPath -Raw
     $headerGuard = "${NEW_NAME_UPPER}_H"
-    $oldHeaderGuard = "${OLD_NAME_UPPER}_${OLD_MODULE}_H".ToUpper()
+    $oldHeaderGuard = "${OLD_MODULE}_H".ToUpper()
     
     $headerContent = $headerContent -replace $oldHeaderGuard, $headerGuard
     $headerContent = $headerContent -replace "\* @file\s+$OLD_MODULE\.h", "* @file $NewName.h"
     
     Set-Content $headerPath -Value $headerContent -NoNewline
-    Write-Host "  Updated include\$NewName\$NewName.h" -ForegroundColor Gray
+    Write-Host "  - Updated $headerPath" -ForegroundColor Gray
 }
 
 # Update source file
@@ -230,7 +204,7 @@ if (Test-Path $sourcePath) {
     $sourceContent = $sourceContent -replace "\* @file\s+$OLD_MODULE\.c", "* @file $NewName.c"
     
     Set-Content $sourcePath -Value $sourceContent -NoNewline
-    Write-Host "  Updated src\$NewName.c" -ForegroundColor Gray
+    Write-Host "  - Updated $sourcePath" -ForegroundColor Gray
 }
 
 # Update test file
@@ -239,23 +213,49 @@ if (Test-Path $testPath) {
     $testContent = Get-Content $testPath -Raw
     $testContent = $testContent -replace "#include `"$OLD_NAME/$OLD_MODULE\.h`"", "#include `"$NewName/$NewName.h`""
     $testContent = $testContent -replace "\* @file\s+test_$OLD_MODULE\.c", "* @file test_$NewName.c"
-    $testContent = $testContent -replace "test_$OLD_MODULE", "test_$NewName"
     
     Set-Content $testPath -Value $testContent -NoNewline
-    Write-Host "  Updated test\unit\test_$NewName.c" -ForegroundColor Gray
+    Write-Host "  - Updated $testPath" -ForegroundColor Gray
 }
+
+# Update root CMakeLists.txt - update source file references
+$rootCMake = Get-Content "CMakeLists.txt" -Raw
+$rootCMake = $rootCMake -replace "src/$OLD_MODULE\.c", "src/$NewName.c"
+$rootCMake = $rootCMake -replace "include/\$\{PROJECT_NAME\}/$OLD_MODULE\.h", "include/`${PROJECT_NAME}/$NewName.h"
+Set-Content "CMakeLists.txt" -Value $rootCMake -NoNewline
+Write-Host "  - Updated CMakeLists.txt (source file references)" -ForegroundColor Gray
 
 # Update README.md
 if (Test-Path "README.md") {
     $readmeContent = Get-Content "README.md" -Raw
     
-    # Replace all instances of mylib (case-sensitive)
     $readmeContent = $readmeContent -replace "\b$OLD_NAME\b", $NewName
-    $readmeContent = $readmeContent -replace "\b$OLD_NAME_UPPER\b", $NEW_NAME_UPPER
-    $readmeContent = $readmeContent -replace "$OLD_MODULE", $NewName
+    $readmeContent = $readmeContent -replace "\b$OLD_MODULE\b", $NewName
     
     Set-Content "README.md" -Value $readmeContent -NoNewline
-    Write-Host "  Updated README.md" -ForegroundColor Gray
+    Write-Host "  - Updated README.md" -ForegroundColor Gray
+}
+
+# Update test/CMakeLists.txt - set TEST_MODULE_NAME variable
+if (Test-Path "test\CMakeLists.txt") {
+    $testCMake = Get-Content "test\CMakeLists.txt" -Raw
+    
+    # Update TEST_MODULE_NAME variable
+    $testCMake = $testCMake -replace 'set\(TEST_MODULE_NAME\s+"[^"]+"\)', "set(TEST_MODULE_NAME `"$NewName`")"
+    
+    Set-Content "test\CMakeLists.txt" -Value $testCMake -NoNewline
+    Write-Host "  - Updated test/CMakeLists.txt (TEST_MODULE_NAME)" -ForegroundColor Gray
+}
+
+# Update .vscode/launch.json
+if (Test-Path ".vscode\launch.json") {
+    $launchJson = Get-Content ".vscode\launch.json" -Raw
+    
+    # Update test executable paths
+    $launchJson = $launchJson -replace "test_$OLD_MODULE\.exe", "test_$NewName.exe"
+    
+    Set-Content ".vscode\launch.json" -Value $launchJson -NoNewline
+    Write-Host "  - Updated .vscode/launch.json" -ForegroundColor Gray
 }
 
 # ==============================================================================
@@ -266,15 +266,26 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host "  Rename Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Library renamed from '$OLD_NAME' to '$NewName'" -ForegroundColor Green
+Write-Host "Library renamed: '$OLD_NAME' -> '$NewName'" -ForegroundColor Green
+Write-Host ""
+Write-Host "What was changed:" -ForegroundColor Cyan
+Write-Host "  - project() declaration in CMakeLists.txt" -ForegroundColor Gray
+Write-Host "  - Source file references in CMakeLists.txt" -ForegroundColor Gray
+Write-Host "  - TEST_MODULE_NAME in test/CMakeLists.txt" -ForegroundColor Gray
+Write-Host "  - include/$OLD_NAME/ directory -> include/$NewName/" -ForegroundColor Gray
+Write-Host "  - Source files: $OLD_MODULE.* -> $NewName.*" -ForegroundColor Gray
+Write-Host "  - #include statements updated" -ForegroundColor Gray
+Write-Host "  - .vscode/launch.json test executable paths" -ForegroundColor Gray
+Write-Host "  - README.md references updated" -ForegroundColor Gray
+Write-Host ""
+Write-Host "What updated automatically (via \${PROJECT_NAME}):" -ForegroundColor Cyan
+Write-Host "  - All CMake library targets" -ForegroundColor Gray
+Write-Host "  - All install paths and exports" -ForegroundColor Gray
+Write-Host "  - Package configuration files" -ForegroundColor Gray
 Write-Host ""
 Write-Host "NEXT STEPS:" -ForegroundColor Cyan
-Write-Host "  1. Review changes:       git status" -ForegroundColor Yellow
-Write-Host "  2. Test build:           .\build.ps1 -Clean -RunTests" -ForegroundColor Yellow
-Write-Host "  3. Update README.md with library-specific information" -ForegroundColor Yellow
-Write-Host "  4. Implement your library functions in src\$NewName.c" -ForegroundColor Yellow
-Write-Host "  5. Write tests in test\unit\test_$NewName.c" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "TIP: Clean the build directory before testing:" -ForegroundColor Gray
-Write-Host "     .\build.ps1 -Clean" -ForegroundColor Gray
+Write-Host "  1. Test the build:    .\build.ps1 -Clean -RunTests" -ForegroundColor Yellow
+Write-Host "  2. Review changes:    git status" -ForegroundColor Yellow
+Write-Host "  3. Update README.md with library-specific details" -ForegroundColor Yellow
+Write-Host "  4. Implement your functions in src\$NewName.c" -ForegroundColor Yellow
 Write-Host ""

@@ -2,7 +2,14 @@
 # Test CMakeLists.txt
 # ==============================================================================
 # Build configuration for unit tests with CMocka
+#
+# Test naming convention: test_<module_name>
+# The test executable will automatically link against ${PROJECT_NAME} library
 # ==============================================================================
+
+# Get project name from parent scope
+# This allows tests to automatically adapt when project is renamed
+set(LIB_NAME ${PROJECT_NAME})
 
 # ==============================================================================
 # CMocka library
@@ -26,19 +33,25 @@ target_compile_options(cmocka PRIVATE
 # ==============================================================================
 # Test executables
 # ==============================================================================
+# NOTE: Test executable naming convention: test_<module_name>
+# The example below uses test_math_utils - rename to match your module
+# After renaming library, update this section or use rename-library.ps1 script
 
-# Test: math_utils
-add_executable(test_math_utils
-    unit/test_math_utils.c
+# Auto-detect test files and create executables
+# For now, using explicit declaration (example: math_utils module)
+set(TEST_MODULE_NAME "math_utils")  # TODO: Update when renaming library
+
+add_executable(test_${TEST_MODULE_NAME}
+    unit/test_${TEST_MODULE_NAME}.c
 )
 
-target_link_libraries(test_math_utils
+target_link_libraries(test_${TEST_MODULE_NAME}
     PRIVATE
-        mylib
+        ${LIB_NAME}  # Uses project name automatically
         cmocka
 )
 
-target_include_directories(test_math_utils
+target_include_directories(test_${TEST_MODULE_NAME}
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/test/fixtures
@@ -47,8 +60,8 @@ target_include_directories(test_math_utils
 
 # Code coverage for tests
 if(ENABLE_COVERAGE)
-    target_compile_options(test_math_utils PRIVATE --coverage)
-    target_link_options(test_math_utils PRIVATE --coverage)
+    target_compile_options(test_${TEST_MODULE_NAME} PRIVATE --coverage)
+    target_link_options(test_${TEST_MODULE_NAME} PRIVATE --coverage)
 endif()
 
 # ==============================================================================
@@ -57,15 +70,15 @@ endif()
 
 # Register test with CTest
 add_test(
-    NAME test_math_utils
-    COMMAND test_math_utils
+    NAME test_${TEST_MODULE_NAME}
+    COMMAND test_${TEST_MODULE_NAME}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
 # Test properties
-set_tests_properties(test_math_utils PROPERTIES
+set_tests_properties(test_${TEST_MODULE_NAME} PROPERTIES
     TIMEOUT 30
-    LABELS "unit;math"
+    LABELS "unit;${TEST_MODULE_NAME}"
 )
 
 # ==============================================================================
@@ -75,7 +88,7 @@ set_tests_properties(test_math_utils PROPERTIES
 # Custom target: run all tests with verbose output
 add_custom_target(check
     COMMAND ${CMAKE_CTEST_COMMAND} --verbose --output-on-failure
-    DEPENDS test_math_utils
+    DEPENDS test_${TEST_MODULE_NAME}
     COMMENT "Running all unit tests..."
 )
 
@@ -95,7 +108,7 @@ if(ENABLE_COVERAGE)
             COMMAND ${GENHTML_EXECUTABLE} coverage_filtered.info --output-directory coverage_html
             COMMAND ${CMAKE_COMMAND} -E echo "Coverage report generated in: coverage_html/index.html"
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            DEPENDS test_math_utils
+            DEPENDS test_${TEST_MODULE_NAME}
             COMMENT "Generating code coverage report..."
         )
         message(STATUS "Coverage target available: make coverage")

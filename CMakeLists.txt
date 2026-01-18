@@ -6,12 +6,25 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-# Project information
+# ==============================================================================
+# PROJECT CONFIGURATION
+# ==============================================================================
+# To rename this library, change the project name below and rename:
+#   - include/mylib/ → include/<new_name>/
+#   - src/mylib.c → src/<new_name>.c (if using single-module convention)
+#   - test/unit/test_mylib.c → test/unit/test_<new_name>.c
+#
+# All CMake targets, exports, and install paths will automatically use the
+# new project name via ${PROJECT_NAME} variable.
+
 project(mylib
     VERSION 1.0.0
     DESCRIPTION "Example library with unit testing template"
     LANGUAGES C
 )
+
+# Derived variables (auto-configured from project name)
+string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
 # C Standard
 set(CMAKE_C_STANDARD 11)
@@ -49,24 +62,28 @@ set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 # ==============================================================================
-# Library: mylib
+# Library: ${PROJECT_NAME}
 # ==============================================================================
 
 # Source files
-set(MYLIB_SOURCES
+# Note: For single-module libraries, name your main file src/${PROJECT_NAME}.c
+# For multi-module libraries, list all source files explicitly
+# Example shown below uses math_utils.c - rename to match your library
+set(${PROJECT_NAME_UPPER}_SOURCES
     src/math_utils.c
 )
 
 # Header files (for IDE support)
-set(MYLIB_HEADERS
-    include/mylib/math_utils.h
+# Example shown below uses math_utils.h - rename to match your library
+set(${PROJECT_NAME_UPPER}_HEADERS
+    include/${PROJECT_NAME}/math_utils.h
 )
 
 # Create library
-add_library(mylib ${MYLIB_SOURCES} ${MYLIB_HEADERS})
+add_library(${PROJECT_NAME} ${${PROJECT_NAME_UPPER}_SOURCES} ${${PROJECT_NAME_UPPER}_HEADERS})
 
 # Include directories
-target_include_directories(mylib
+target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
@@ -75,20 +92,20 @@ target_include_directories(mylib
 )
 
 # Compiler flags for library
-target_compile_options(mylib PRIVATE ${WARNING_FLAGS})
+target_compile_options(${PROJECT_NAME} PRIVATE ${WARNING_FLAGS})
 
 # Code coverage support
 if(ENABLE_COVERAGE)
     message(STATUS "Code coverage enabled")
-    target_compile_options(mylib PRIVATE --coverage -fprofile-arcs -ftest-coverage)
-    target_link_options(mylib PRIVATE --coverage)
+    target_compile_options(${PROJECT_NAME} PRIVATE --coverage -fprofile-arcs -ftest-coverage)
+    target_link_options(${PROJECT_NAME} PRIVATE --coverage)
 endif()
 
 # Set library properties
-set_target_properties(mylib PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "${MYLIB_HEADERS}"
+    PUBLIC_HEADER "${${PROJECT_NAME_UPPER}_HEADERS}"
 )
 
 # ==============================================================================
@@ -98,16 +115,16 @@ set_target_properties(mylib PROPERTIES
 include(GNUInstallDirs)
 
 # Install library
-install(TARGETS mylib
-    EXPORT mylibTargets
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}Targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mylib
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 )
 
 # Install headers
-install(DIRECTORY include/mylib
+install(DIRECTORY include/${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
 )
@@ -115,7 +132,7 @@ install(DIRECTORY include/mylib
 # Install sources (for embedded projects)
 if(INSTALL_SOURCES)
     install(DIRECTORY src/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/src/mylib
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/src/${PROJECT_NAME}
         FILES_MATCHING PATTERN "*.c"
         PATTERN "private" EXCLUDE
     )
@@ -123,10 +140,10 @@ if(INSTALL_SOURCES)
 endif()
 
 # Install CMake config files
-install(EXPORT mylibTargets
-    FILE mylibTargets.cmake
-    NAMESPACE mylib::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mylib
+install(EXPORT ${PROJECT_NAME}Targets
+    FILE ${PROJECT_NAME}Targets.cmake
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 # ==============================================================================

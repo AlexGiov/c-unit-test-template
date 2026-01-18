@@ -55,9 +55,36 @@ $GCOV_PATH = "C:/devbin/mingw/mingw64/8.1.0/bin/gcov.exe"
 $BUILD_DIR = "build"
 $COVERAGE_DIR = "coverage"
 
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
+
+# Extract project name from CMake cache
+function Get-ProjectName {
+    if (Test-Path "$BUILD_DIR/CMakeCache.txt") {
+        $cacheLine = Get-Content "$BUILD_DIR/CMakeCache.txt" | Select-String "CMAKE_PROJECT_NAME:STATIC=(.+)"
+        if ($cacheLine) {
+            return $cacheLine.Matches.Groups[1].Value
+        }
+    }
+    # Fallback: read from CMakeLists.txt
+    if (Test-Path "CMakeLists.txt") {
+        $content = Get-Content "CMakeLists.txt" -Raw
+        if ($content -match 'project\s*\(\s*(\w+)') {
+            return $Matches[1]
+        }
+    }
+    return "mylib"  # Default fallback
+}
+
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Code Coverage Report Generator" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Get project name
+$projectName = Get-ProjectName
+Write-Host "[INFO] Project: $projectName" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if build with coverage exists
@@ -96,13 +123,16 @@ Write-Host "[COVERAGE] Processing coverage data..." -ForegroundColor Yellow
 $sourceFiles = Get-ChildItem -Path "src" -Filter "*.c" -Recurse
 $workDir = Get-Location
 
+# Build CMake object directory path using project name
+$cmakeObjDir = "$BUILD_DIR/CMakeFiles/$projectName.dir/src"
+
 foreach ($file in $sourceFiles) {
     $fileName = $file.Name
     
     Write-Host "  Processing: $fileName" -ForegroundColor Gray
     
-    # Find corresponding .gcno file
-    $gcnoFile = Get-ChildItem -Path "$BUILD_DIR/CMakeFiles/mylib.dir/src" -Filter "$fileName.gcno" -ErrorAction SilentlyContinue | Select-Object -First 1
+    # Find corresponding .gcno file in project-specific directory
+    $gcnoFile = Get-ChildItem -Path $cmakeObjDir -Filter "$fileName.gcno" -ErrorAction SilentlyContinue | Select-Object -First 1
     
     if ($gcnoFile) {
         $objDir = $gcnoFile.DirectoryName
