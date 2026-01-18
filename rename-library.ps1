@@ -143,6 +143,8 @@ $rootCMake = $rootCMake -replace "${OLD_NAME_UPPER}_HEADERS", "${NEW_NAME_UPPER}
 $rootCMake = $rootCMake -replace "add_library\($OLD_NAME", "add_library($NewName"
 $rootCMake = $rootCMake -replace "target_include_directories\($OLD_NAME", "target_include_directories($NewName"
 $rootCMake = $rootCMake -replace "target_compile_options\($OLD_NAME", "target_compile_options($NewName"
+$rootCMake = $rootCMake -replace "target_link_options\($OLD_NAME", "target_link_options($NewName"
+$rootCMake = $rootCMake -replace "set_target_properties\($OLD_NAME", "set_target_properties($NewName"
 
 # Replace file references
 $rootCMake = $rootCMake -replace "src/$OLD_MODULE\.c", "src/$NewName.c"
@@ -154,6 +156,15 @@ $rootCMake = $rootCMake -replace "DESTINATION \`${CMAKE_INSTALL_PREFIX}/src/$OLD
 
 # Replace install targets
 $rootCMake = $rootCMake -replace "install\(TARGETS $OLD_NAME", "install(TARGETS $NewName"
+$rootCMake = $rootCMake -replace "EXPORT ${OLD_NAME}Targets", "EXPORT ${NewName}Targets"
+$rootCMake = $rootCMake -replace "PUBLIC_HEADER DESTINATION [^\s)]+include/$OLD_NAME", "PUBLIC_HEADER DESTINATION `${CMAKE_INSTALL_INCLUDEDIR}/$NewName"
+$rootCMake = $rootCMake -replace "install\(DIRECTORY include/$OLD_NAME", "install(DIRECTORY include/$NewName"
+
+# Replace CMake export config
+$rootCMake = $rootCMake -replace "install\(EXPORT ${OLD_NAME}Targets", "install(EXPORT ${NewName}Targets"
+$rootCMake = $rootCMake -replace "FILE ${OLD_NAME}Targets\.cmake", "FILE ${NewName}Targets.cmake"
+$rootCMake = $rootCMake -replace "NAMESPACE ${OLD_NAME}::", "NAMESPACE ${NewName}::"
+$rootCMake = $rootCMake -replace "DESTINATION \`${CMAKE_INSTALL_LIBDIR}/cmake/$OLD_NAME", "DESTINATION `${CMAKE_INSTALL_LIBDIR}/cmake/$NewName"
 
 Set-Content "CMakeLists.txt" -Value $rootCMake -NoNewline
 
@@ -168,12 +179,27 @@ $testCMake = Get-Content "test\CMakeLists.txt" -Raw
 $testCMake = $testCMake -replace "add_executable\(test_$OLD_MODULE", "add_executable(test_$NewName"
 $testCMake = $testCMake -replace "target_link_libraries\(test_$OLD_MODULE", "target_link_libraries(test_$NewName"
 $testCMake = $testCMake -replace "set_target_properties\(test_$OLD_MODULE", "set_target_properties(test_$NewName"
+$testCMake = $testCMake -replace "target_include_directories\(test_$OLD_MODULE", "target_include_directories(test_$NewName"
+$testCMake = $testCMake -replace "target_compile_options\(test_$OLD_MODULE", "target_compile_options(test_$NewName"
+$testCMake = $testCMake -replace "target_link_options\(test_$OLD_MODULE", "target_link_options(test_$NewName"
 
 # Replace file references
 $testCMake = $testCMake -replace "unit/test_$OLD_MODULE\.c", "unit/test_$NewName.c"
 
-# Replace library target
-$testCMake = $testCMake -replace "PRIVATE $OLD_NAME", "PRIVATE $NewName"
+# Replace library target in target_link_libraries
+# Handle both inline and multiline cases
+$testCMake = $testCMake -replace "PRIVATE\s+$OLD_NAME", "PRIVATE $NewName"
+$testCMake = $testCMake -replace "(\s+)$OLD_NAME(\s+cmocka)", "`$1$NewName`$2"
+
+# Replace CTest configuration
+$testCMake = $testCMake -replace "add_test\(\s*NAME test_$OLD_MODULE", "add_test(`n    NAME test_$NewName"
+$testCMake = $testCMake -replace "COMMAND test_$OLD_MODULE", "COMMAND test_$NewName"
+$testCMake = $testCMake -replace "set_tests_properties\(test_$OLD_MODULE", "set_tests_properties(test_$NewName"
+$testCMake = $testCMake -replace "DEPENDS test_$OLD_MODULE", "DEPENDS test_$NewName"
+
+# Replace all remaining references to old module name in test file
+$testCMake = $testCMake -replace "test_$OLD_MODULE", "test_$NewName"
+$testCMake = $testCMake -replace "\b$OLD_MODULE\b", $NewName
 
 Set-Content "test\CMakeLists.txt" -Value $testCMake -NoNewline
 
