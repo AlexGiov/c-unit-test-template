@@ -50,3 +50,6 @@ desktop.ini
 *.tmp
 *.bak
 *.old
+
+# Personal files
+README_AG.md

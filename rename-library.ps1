@@ -190,7 +190,7 @@ if (Test-Path $headerPath) {
     $oldHeaderGuard = "${OLD_NAME_UPPER}_${OLD_MODULE}_H".ToUpper()
     
     $headerContent = $headerContent -replace $oldHeaderGuard, $headerGuard
-    $headerContent = $headerContent -replace "* @file\s+$OLD_MODULE\.h", "* @file $NewName.h"
+    $headerContent = $headerContent -replace "\* @file\s+$OLD_MODULE\.h", "* @file $NewName.h"
     
     Set-Content $headerPath -Value $headerContent -NoNewline
     Write-Host "  Updated include\$NewName\$NewName.h" -ForegroundColor Gray
@@ -201,7 +201,7 @@ $sourcePath = "src\$NewName.c"
 if (Test-Path $sourcePath) {
     $sourceContent = Get-Content $sourcePath -Raw
     $sourceContent = $sourceContent -replace "#include `"$OLD_NAME/$OLD_MODULE\.h`"", "#include `"$NewName/$NewName.h`""
-    $sourceContent = $sourceContent -replace "* @file\s+$OLD_MODULE\.c", "* @file $NewName.c"
+    $sourceContent = $sourceContent -replace "\* @file\s+$OLD_MODULE\.c", "* @file $NewName.c"
     
     Set-Content $sourcePath -Value $sourceContent -NoNewline
     Write-Host "  Updated src\$NewName.c" -ForegroundColor Gray
@@ -212,7 +212,7 @@ $testPath = "test\unit\test_$NewName.c"
 if (Test-Path $testPath) {
     $testContent = Get-Content $testPath -Raw
     $testContent = $testContent -replace "#include `"$OLD_NAME/$OLD_MODULE\.h`"", "#include `"$NewName/$NewName.h`""
-    $testContent = $testContent -replace "* @file\s+test_$OLD_MODULE\.c", "* @file test_$NewName.c"
+    $testContent = $testContent -replace "\* @file\s+test_$OLD_MODULE\.c", "* @file test_$NewName.c"
     $testContent = $testContent -replace "test_$OLD_MODULE", "test_$NewName"
     
     Set-Content $testPath -Value $testContent -NoNewline
