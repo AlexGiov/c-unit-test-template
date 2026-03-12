@@ -310,6 +310,15 @@ else {
     Write-Host "[INFO] Setting version to: $newVersion" -ForegroundColor Cyan
 }
 
+# Check if version actually changed
+if ($newVersion -eq $currentVersion.String) {
+    Write-Host ""
+    Write-Host "[ERROR] New version is the same as current version: $newVersion" -ForegroundColor Red
+    Write-Host "        No changes to make." -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
 Write-Host ""
 
 # Check Git status (skip in dry run for testing)
