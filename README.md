@@ -58,37 +58,66 @@ $CMAKE_GENERATOR = "Ninja"            # Faster, requires Ninja installed
 
 ## 📁 Directory Structure
 
+The template is organized into two main parts: the **core library** (deliverable) and the **development infrastructure** (testing & tooling).
+
+### Core Library Structure (Installable)
+
+This is what gets installed and integrated into your application:
+
 ```
 unit_test_template/
-├── include/mylib/          # Public headers (installable)
-│   └── math_utils.h
-├── src/                    # Library sources (installable)
-│   ├── math_utils.c
-│   └── private/            # Private sources (not installable)
-├── test/
+├── include/mylib/          # Public API headers
+│   └── mylib.h             # Public interface
+├── src/                    # Library implementation
+│   ├── mylib.c             # Implementation files
+│   └── private/            # Private implementation (not installed)
+└── config/                 # Configuration templates
+    └── mylib_config.h.template  # Configuration example
+```
+
+**Why this structure?**
+- `include/mylib/` - Uses namespace subfolder to avoid header name collisions
+- `src/` - Contains implementation; installable for embedded integration
+- `src/private/` - Internal implementation details (excluded from install)
+- `config/` - Template for application-specific configuration
+
+### Development Infrastructure (Non-installable)
+
+Tools and tests for library development:
+
+```
+unit_test_template/
+├── cfg/                    # Configuration for this build
+│   └── mylib_config.h      # Actual config used during development/testing
+├── test/                   # Testing framework
 │   ├── unit/               # Unit test files
-│   │   └── test_math_utils.c
+│   │   └── test_mylib.c
 │   ├── mocks/              # Mock implementations
 │   ├── fixtures/           # Test fixtures
 │   └── data/               # Test data files
-├── external/
-│   └── cmocka/             # CMocka test framework
+├── external/               # External dependencies
+│   └── cmocka/             # CMocka test framework (embedded)
 │       ├── include/
 │       └── src/
-├── cmake/                  # CMake modules
+├── cmake/                  # Build system configuration
 │   ├── toolchain-mingw.cmake
 │   └── README.md
-├── vendor/hal/             # Vendor libraries (HAL, RTOS)
 ├── build/                  # Build artifacts (gitignored)
 ├── bin/                    # Test executables (gitignored)
 ├── lib/                    # Compiled libraries (gitignored)
 ├── coverage/               # Coverage reports (gitignored)
-├── docs/                   # Documentation
-├── .vscode/                # VS Code configuration
+├── .vscode/                # VS Code integration
 ├── build.ps1               # Build automation script
 ├── coverage.ps1            # Coverage report generator
-└── CMakeLists.txt          # Main build configuration
+└── CMakeLists.txt          # Build configuration
 ```
+
+**Development vs Production:**
+- Test infrastructure stays in the library repository
+- `cfg/` contains the actual config used for testing (NOT installed)
+- `config/` contains templates for applications to copy and customize
+- Only `include/`, `src/`, and `config/` templates are installed
+- Application gets clean library without test dependencies
 
 ## 🛠️ Renaming the Template Library
 
@@ -116,7 +145,7 @@ cd my-new-library
 **What the script does (simplified):**
 1. ✅ Changes `project(mylib)` → `project(sensor_driver)` in CMakeLists.txt
 2. ✅ Renames `include/mylib/` → `include/sensor_driver/`
-3. ✅ Renames source files: `math_utils.*` → `sensor_driver.*`
+3. ✅ Renames source files: `mylib.*` → `sensor_driver.*`
 4. ✅ Updates `#include` statements in C files
 5. ✅ Updates README.md references
 
@@ -153,9 +182,9 @@ project(your_library_name VERSION 1.0.0 LANGUAGES C)
 mv include/mylib include/your_library_name
 
 # Rename source files (if single-module library)
-mv src/math_utils.c src/your_library_name.c
-mv include/your_library_name/math_utils.h include/your_library_name/your_library_name.h
-mv test/unit/test_math_utils.c test/unit/test_your_library_name.c
+mv src/mylib.c src/your_library_name.c
+mv include/your_library_name/mylib.h include/your_library_name/your_library_name.h
+mv test/unit/test_mylib.c test/unit/test_your_library_name.c
 ```
 
 ### 3. Update #include Statements
@@ -302,29 +331,91 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
 
 ## 🔧 Embedded Integration
 
-This template is designed for embedded systems where you often need source files, not just compiled libraries:
+This template is designed for embedded systems where you often need source files, not just compiled libraries.
 
-### Install Sources for Embedded Project
+### Installation Options
+
+Control what gets installed with CMake options:
+
+| Option            | Default | Description                            |
+| ----------------- | ------- | -------------------------------------- |
+| `INSTALL_SOURCES` | `ON`    | Install .c files for embedded projects |
+| `BUILD_TESTING`   | `ON`    | Enable test building (dev only)        |
+
+### Install Library Files
 
 ```bash
-cmake --build build --target install
+# Configure with install prefix
+cmake -B build -DCMAKE_INSTALL_PREFIX=install
+
+# Build and install
+cmake --build build
+cmake --install build
 
 # Installed structure:
-# install/
-# ├── include/mylib/          # Headers
-# └── src/mylib/              # Source files
+install/
+├── include/mylib/          # Public headers
+│   └── mylib.h
+├── src/mylib/              # Source files (if INSTALL_SOURCES=ON)
+│   └── mylib.c
+├── config/mylib/           # Configuration template
+│   └── mylib_config.h.template
+└── lib/cmake/mylib/        # CMake package config
+    ├── mylibTargets.cmake
+    └── mylibConfig.cmake
 ```
+
+### Configuration Template Usage
+
+1. **Copy template to your application:**
+
+```bash
+cp install/config/mylib/mylib_config.h.template myapp/cfg/mylib_config.h
+```
+
+2. **Customize configuration:**
+
+```c
+// myapp/cfg/mylib_config.h
+#ifndef MYLIB_CONFIG_H
+#define MYLIB_CONFIG_H
+
+#define MYLIB_DIV_BY_ZERO_RETURN -1  // Return error code
+#define MYLIB_ENABLE_ASSERTIONS      // Enable debug checks
+
+#endif
+```
+
+3. **Add config directory to your build:**
+
+```cmake
+# In your application CMakeLists.txt
+target_include_directories(myapp PRIVATE
+    ${CMAKE_SOURCE_DIR}/cfg  # Your config directory
+)
+```
+
+The library will automatically detect and use `mylib_config.h` if available.
 
 ### Use in Embedded Project
 
+**Option 1: Link installed library**
+
 ```cmake
-# In your embedded project CMakeLists.txt
+find_package(mylib REQUIRED)
+target_link_libraries(myapp PRIVATE mylib::mylib)
+```
+
+**Option 2: Include sources directly (embedded)**
+
+```cmake
 add_library(mylib
-    ${VENDOR_DIR}/mylib/src/math_utils.c
+    ${VENDOR_DIR}/mylib/src/mylib.c
 )
 
 target_include_directories(mylib PUBLIC
     ${VENDOR_DIR}/mylib/include
+    ${CMAKE_SOURCE_DIR}/cfg  # Your config
 )
 ```
 
@@ -339,20 +430,32 @@ git push origin v1.0.0
 git clone --branch v1.0.0 <repo-url> vendor/mylib
 ```
 
-## 📝 Example: math_utils Library
+### Library Structure Best Practices
 
-The template includes a simple `math_utils` library as an example:
+This template follows professional C library organization:
+
+- **Namespace headers** - `include/mylib/` prevents naming conflicts
+- **Separate public/private** - Only `include/` is public API
+- **Template config** - Library provides template, app provides actual config
+- **Optional configuration** - Library works with or without config file
+- **Source installation** - Enables embedded system integration
+
+For detailed explanation of library structure patterns, see inline documentation in source files.
+
+## 📝 Example: mylib Library
+
+The template includes a simple `mylib` library as an example:
 
 ### Library Code
 
 ```c
-// include/mylib/math_utils.h
+// include/mylib/mylib.h
 int add(int a, int b);
 int subtract(int a, int b);
 int multiply(int a, int b);
 int divide(int a, int b);
 
-// src/math_utils.c
+// src/mylib.c
 int add(int a, int b) { return a + b; }
 int divide(int a, int b) {
     if (b == 0) return 0;  // Safety check
@@ -363,7 +466,7 @@ int divide(int a, int b) {
 ### Test Code
 
 ```c
-// test/unit/test_math_utils.c
+// test/unit/test_mylib.c
 static void test_add_positive(void **state) {
     assert_int_equal(add(2, 3), 5);
 }
@@ -385,7 +488,7 @@ static void test_divide_by_zero(void **state) {
 
 1. Set breakpoint in test file or source
 2. Press `F5`
-3. Select "Debug Test: math_utils"
+3. Select "Debug Test: mylib"
 4. Step through code with GDB
 
 ### Debug Configuration

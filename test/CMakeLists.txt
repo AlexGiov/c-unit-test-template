@@ -34,12 +34,11 @@ target_compile_options(cmocka PRIVATE
 # Test executables
 # ==============================================================================
 # NOTE: Test executable naming convention: test_<module_name>
-# The example below uses test_math_utils - rename to match your module
 # After renaming library, update this section or use rename-library.ps1 script
 
 # Auto-detect test files and create executables
-# For now, using explicit declaration (example: math_utils module)
-set(TEST_MODULE_NAME "math_utils")  # TODO: Update when renaming library
+# For now, using explicit declaration
+set(TEST_MODULE_NAME "mylib")
 
 add_executable(test_${TEST_MODULE_NAME}
     unit/test_${TEST_MODULE_NAME}.c

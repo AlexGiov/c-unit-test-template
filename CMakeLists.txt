@@ -68,15 +68,13 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 # Source files
 # Note: For single-module libraries, name your main file src/${PROJECT_NAME}.c
 # For multi-module libraries, list all source files explicitly
-# Example shown below uses math_utils.c - rename to match your library
 set(${PROJECT_NAME_UPPER}_SOURCES
-    src/math_utils.c
+    src/mylib.c
 )
 
 # Header files (for IDE support)
-# Example shown below uses math_utils.h - rename to match your library
 set(${PROJECT_NAME_UPPER}_HEADERS
-    include/${PROJECT_NAME}/math_utils.h
+    include/${PROJECT_NAME}/mylib.h
 )
 
 # Create library
@@ -89,6 +87,7 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/private
+        ${CMAKE_CURRENT_SOURCE_DIR}/cfg  # Configuration for this build
 )
 
 # Compiler flags for library
@@ -138,6 +137,12 @@ if(INSTALL_SOURCES)
     )
     message(STATUS "Source installation enabled (for embedded integration)")
 endif()
+
+# Install configuration template
+install(DIRECTORY config/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/config/${PROJECT_NAME}
+    FILES_MATCHING PATTERN "*.template"
+)
 
 # Install CMake config files
 install(EXPORT ${PROJECT_NAME}Targets

@@ -1,0 +1,63 @@
+/**
+ * @file mylib_config.h.template
+ * @brief Configuration template for mylib library
+ *
+ * INSTRUCTIONS:
+ * 1. Copy this file to your application's config directory:
+ *    cp config/mylib_config.h.template <your_app>/cfg/mylib_config.h
+ *
+ * 2. Add your config directory to include path in CMakeLists.txt:
+ *    target_include_directories(your_app PRIVATE ${CMAKE_SOURCE_DIR}/cfg)
+ *
+ * 3. Customize the settings below according to your application needs
+ *
+ * 4. The library will use these settings at compile time
+ */
+
+#ifndef MYLIB_CONFIG_H
+#define MYLIB_CONFIG_H
+
+/* ===========================================================================
+ * DIVISION BY ZERO HANDLING
+ * ===========================================================================
+ * Configure the return value when divide() is called with divisor = 0
+ *
+ * Common options:
+ *   0    - Safe default (no crash, predictable behavior)
+ *   -1   - Error indicator
+ *   INT_MAX or INT_MIN - Saturate to boundary values
+ */
+#ifndef MYLIB_DIV_BY_ZERO_RETURN
+#define MYLIB_DIV_BY_ZERO_RETURN 0
+#endif
+
+/* ===========================================================================
+ * DEBUG ASSERTIONS
+ * ===========================================================================
+ * Enable runtime assertions for parameter validation
+ * Useful during development, disable in production for performance
+ *
+ * When enabled:
+ *   - Checks for NULL pointers
+ *   - Validates input ranges
+ *   - Asserts internal state consistency
+ */
+// #define MYLIB_ENABLE_ASSERTIONS
+
+/* ===========================================================================
+ * OVERFLOW DETECTION
+ * ===========================================================================
+ * Enable integer overflow detection in math operations
+ * Warning: Adds runtime overhead
+ */
+// #define MYLIB_CHECK_OVERFLOW
+
+/* ===========================================================================
+ * LOGGING
+ * ===========================================================================
+ * Enable internal logging for debugging
+ * Requires external logging functions to be provided
+ */
+// #define MYLIB_ENABLE_LOGGING
+
+#endif /* MYLIB_CONFIG_H */

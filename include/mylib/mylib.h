@@ -1,12 +1,12 @@
 /**
- * @file math_utils.h
- * @brief Simple math utility functions for testing
+ * @file mylib.h
+ * @brief mylib library public API
  *
  * This is a simple example library to demonstrate the unit testing template.
  */
 
-#ifndef MYLIB_MATH_UTILS_H
-#define MYLIB_MATH_UTILS_H
+#ifndef MYLIB_H
+#define MYLIB_H
 
 #ifdef __cplusplus
 extern "C" {

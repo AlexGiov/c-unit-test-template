@@ -1,6 +1,6 @@
 /**
- * @file test_math_utils.c
- * @brief Unit tests for math_utils library
+ * @file test_mylib.c
+ * @brief Unit tests for mylib library
  *
  * This demonstrates basic unit testing with cmocka.
  */
@@ -11,8 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "mylib/math_utils.h"
-
+#include "mylib/mylib.h"
 
 /* Test fixtures */
 static int setup(void** state) {
