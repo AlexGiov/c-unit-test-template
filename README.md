@@ -10,7 +10,8 @@ Professional template for unit testing C libraries with CMocka framework, design
 - ✅ **VS Code Integration** - Debug configuration and build tasks
 - ✅ **Embedded-Friendly** - Install sources for embedded integration
 - ✅ **Modular Structure** - Professional directory organization
-- ✅ **Automated Scripts** - PowerShell build and coverage automation
+- ✅ **Automated Scripts** - PowerShell build, coverage, and release automation
+- ✅ **Version Management** - Automated semantic versioning and Git tagging
 
 ## 🚀 Quick Start
 
@@ -109,6 +110,8 @@ unit_test_template/
 ├── .vscode/                # VS Code integration
 ├── build.ps1               # Build automation script
 ├── coverage.ps1            # Coverage report generator
+├── release.ps1             # Version bump and release automation
+├── rename-library.ps1      # Library renaming utility
 └── CMakeLists.txt          # Build configuration
 ```
 
@@ -419,14 +422,61 @@ target_include_directories(mylib PUBLIC
 )
 ```
 
-### Git Tagging for Versioning
+### Versioning and Releases
+
+#### Automated Release (Recommended)
+
+Use the included `release.ps1` script for automated version management:
+
+```powershell
+# Bump patch version (1.0.0 → 1.0.1)
+.\release.ps1 -BumpVersion patch
+
+# Bump minor version (1.0.0 → 1.1.0)
+.\release.ps1 -BumpVersion minor
+
+# Bump major version (1.0.0 → 2.0.0)
+.\release.ps1 -BumpVersion major
+
+# Set specific version
+.\release.ps1 -Version 2.0.0
+
+# Create GitHub release (requires gh CLI)
+.\release.ps1 -BumpVersion patch -CreateGitHubRelease
+
+# Preview changes without executing
+.\release.ps1 -BumpVersion minor -DryRun
+```
+
+**What the script does:**
+1. ✅ Reads current version from CMakeLists.txt
+2. ✅ Bumps version following semantic versioning
+3. ✅ Updates CMakeLists.txt with new version
+4. ✅ Commits the version change
+5. ✅ Creates annotated Git tag (e.g., v1.0.0)
+6. ✅ Pushes tag to remote
+7. ✅ Optionally creates GitHub release (with `-CreateGitHubRelease`)
+
+**Requirements:**
+- Git (always required)
+- GitHub CLI (`gh`) - only if using `-CreateGitHubRelease`
+  - Install from: https://cli.github.com/
+
+#### Manual Git Tagging
+
+If you prefer manual tagging:
 
 ```bash
-# Tag a release
+# Update version in CMakeLists.txt manually
+# Then create and push tag
 git tag -a v1.0.0 -m "Release version 1.0.0"
 git push origin v1.0.0
+```
 
-# In your embedded project, use specific version
+#### Using Specific Versions in Embedded Projects
+
+```bash
+# Clone specific version into vendor directory
 git clone --branch v1.0.0 <repo-url> vendor/mylib
 ```
 
