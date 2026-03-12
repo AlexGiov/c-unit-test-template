@@ -108,7 +108,7 @@ function Get-CurrentModuleName {
         $firstFile = $srcFiles[0].BaseName
         return $firstFile
     }
-    return "mylib"  # fallback default
+    return "math_utils"  # fallback default
 }
 
 # ==============================================================================
