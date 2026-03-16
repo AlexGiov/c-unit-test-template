@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.10)
 # new project name via ${PROJECT_NAME} variable.
 
 project(mylib
-    VERSION 2.0.0
+    VERSION 2.0.1
     DESCRIPTION "Example library with unit testing template"
     LANGUAGES C
 )
