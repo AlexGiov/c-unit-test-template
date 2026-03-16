@@ -17,6 +17,10 @@ Makefile
 *.cmake
 !CMakeLists.txt
 !cmake/*.cmake
+!build.cmake
+!coverage.cmake
+!release.cmake
+!rename-library.cmake
 
 # Coverage
 *.gcno
