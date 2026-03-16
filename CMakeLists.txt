@@ -26,6 +26,15 @@ project(mylib
 # Derived variables (auto-configured from project name)
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
+# Verify Ninja generator is being used
+if(NOT CMAKE_GENERATOR MATCHES "Ninja")
+    message(WARNING 
+        "This project requires Ninja build system.\n"
+        "  Current generator: ${CMAKE_GENERATOR}\n"
+        "  Use the build.cmake script: cmake -P build.cmake\n"
+    )
+endif()
+
 # C Standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

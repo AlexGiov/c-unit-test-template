@@ -5,50 +5,92 @@ Professional template for unit testing C libraries with CMocka framework, design
 ## 📋 Features
 
 - ✅ **CMocka Integration** - Professional C unit testing framework
+- ✅ **Ninja Build System** - Fast, reliable, cross-platform builds (required)
 - ✅ **CMake Build System** - Cross-platform, cross-compiler support
 - ✅ **Code Coverage** - Integrated gcov support with HTML reports
 - ✅ **VS Code Integration** - Debug configuration and build tasks
 - ✅ **Embedded-Friendly** - Install sources for embedded integration
 - ✅ **Modular Structure** - Professional directory organization
-- ✅ **Automated Scripts** - PowerShell build, coverage, and release automation
+- ✅ **Cross-Platform Scripts** - CMake automation for Windows/Linux/macOS
 - ✅ **Version Management** - Automated semantic versioning and Git tagging
+- ✅ **Minimal Dependencies** - Only CMake + Ninja required
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- CMake 3.10+
+- CMake 3.16+
 - GCC or compatible C compiler
 - gcov (for coverage analysis)
-- (Optional) Ninja build system for faster builds
+- **Ninja build system** - **REQUIRED** for optimal performance and cross-platform consistency
+- Git (for version management)
+- (Optional) GitHub CLI `gh` for automated releases
+
+**Installing Ninja:**
+```bash
+# Windows (Chocolatey)
+choco install ninja
+
+# Windows (Scoop)
+scoop install ninja
+
+# Linux (Ubuntu/Debian)
+sudo apt install ninja-build
+
+# macOS (Homebrew)
+brew install ninja
+
+# Or download standalone binary (~200KB):
+# https://github.com/ninja-build/ninja/releases
+```
+
+**Why Ninja is required:**
+- ✅ **2-3x faster builds** than Make
+- ✅ **No Cygwin conflicts** on Windows
+- ✅ **Consistent behavior** across all platforms
+- ✅ **Industry standard** (used by LLVM, Chromium, Android NDK)
+- ✅ **Tiny footprint** (~200KB standalone executable)
 
 ### Build and Test
 
-```powershell
+**Cross-Platform (Works on Windows, Linux, macOS):**
+
+```bash
 # Build project
-.\build.ps1
+cmake -P build.cmake
 
 # Build with tests
-.\build.ps1 -RunTests
+cmake -DRUN_TESTS=ON -P build.cmake
 
 # Clean build
-.\build.ps1 -Clean
+cmake -DCLEAN=ON -P build.cmake
 
 # Build with coverage
-.\build.ps1 -Coverage -RunTests
+cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake
 
 # Generate coverage report
-.\coverage.ps1 -GenerateHtml
+cmake -P coverage.cmake
 ```
 
-**Build System Configuration:**
+**Platform-Specific Configuration:**
 
-The build script supports both MinGW Makefiles and Ninja generators. Edit the `$CMAKE_GENERATOR` variable at the top of `build.ps1` to switch:
+The scripts automatically detect your environment:
 
+- **Build System**: Ninja (required) - automatically detected
+- **Compiler Auto-Detection**: GCC is found automatically in system PATH or common installation locations
+- **Cross-Platform**: Same commands work identically on Windows, Linux, and macOS
+
+**Custom Configuration (Advanced):**
+
+Override auto-detection with environment variables:
 ```powershell
-# In build.ps1 (line ~68)
-$CMAKE_GENERATOR = "MinGW Makefiles"  # Default, always available
-$CMAKE_GENERATOR = "Ninja"            # Faster, requires Ninja installed
+# Windows
+$env:CMAKE_C_COMPILER = "C:\custom\path\gcc.exe"
+$env:GCOV_EXECUTABLE = "C:\custom\path\gcov.exe"
+
+# Linux/macOS
+export CMAKE_C_COMPILER=/usr/bin/clang
+export GCOV_EXECUTABLE=/usr/bin/gcov
 ```
 
 ### VS Code
@@ -108,10 +150,10 @@ unit_test_template/
 ├── lib/                    # Compiled libraries (gitignored)
 ├── coverage/               # Coverage reports (gitignored)
 ├── .vscode/                # VS Code integration
-├── build.ps1               # Build automation script
-├── coverage.ps1            # Coverage report generator
-├── release.ps1             # Version bump and release automation
-├── rename-library.ps1      # Library renaming utility
+├── build.cmake             # Cross-platform build automation
+├── coverage.cmake          # Cross-platform coverage report generator
+├── release.cmake           # Cross-platform version management
+├── rename-library.cmake    # Library renaming utility (cross-platform)
 └── CMakeLists.txt          # Build configuration
 ```
 
@@ -128,16 +170,16 @@ unit_test_template/
 
 Thanks to CMake's `${PROJECT_NAME}` pattern, renaming is now **much simpler**:
 
-```powershell
+```bash
 # 1. Clone this template
 git clone <repo-url> my-new-library
 cd my-new-library
 
-# 2. Run rename script - it's now much faster and simpler!
-.\rename-library.ps1 -NewName "sensor_driver"
+# 2. Run rename script (cross-platform)
+cmake -DNEW_NAME=sensor_driver -P rename-library.cmake
 
-# 3. Build and test
-.\build.ps1 -Clean -RunTests
+# 3. Build and test (cross-platform)
+cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake
 
 # 4. Implement your library code
 #    - Edit src/sensor_driver.c
@@ -151,6 +193,8 @@ cd my-new-library
 3. ✅ Renames source files: `mylib.*` → `sensor_driver.*`
 4. ✅ Updates `#include` statements in C files
 5. ✅ Updates README.md references
+
+**Cross-platform:** Works identically on Windows, Linux, and macOS!
 
 **What happens automatically (via `${PROJECT_NAME}`):**
 - ✨ All CMake library targets
@@ -290,32 +334,48 @@ test/unit/test_your_module.c
 
 ### 4. Build and Test
 
-```powershell
-.\build.ps1 -RunTests
+```bash
+cmake -P build.cmake -DRUN_TESTS=ON
 ```
 
 </details>
 
 ## 📊 Code Coverage
 
-The template includes integrated code coverage support:
+The template includes integrated code coverage support with HTML report generation:
 
-```powershell
-# Build with coverage enabled
-.\build.ps1 -Clean -Coverage -RunTests
+```bash
+# Build with coverage enabled (cross-platform)
+cmake -DCLEAN=ON -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake
 
-# Generate HTML coverage report
-.\coverage.ps1 -GenerateHtml
+# Generate coverage report (.gcov files only)
+cmake -P coverage.cmake
 
-# View report
-start coverage\index.html
+# Generate coverage report with HTML visualization
+cmake -DGENERATE_HTML=ON -P coverage.cmake
+
+# View HTML report
+# Windows: start coverage\index.html
+# Linux: xdg-open coverage/index.html
+# macOS: open coverage/index.html
 ```
 
 Coverage reports show:
-- Line-by-line coverage with gcov
+- **Line-by-line coverage** with gcov (.gcov files)
+  - Format: `execution_count: line_number: source_code`
+  - Example:
+    ```
+           11:   20:int add(int a, int b) { return a + b; }
+            4:   22:int subtract(int a, int b) { return a - b; }
+            -:   23:  // Lines starting with '-' are non-executable
+    ```
 - Overall coverage percentage
 - Per-file coverage breakdown
-- HTML report with color-coded results
+- **HTML report** with interactive visualization (with `-DGENERATE_HTML=ON`):
+  - Color-coded coverage levels (green ≥80%, yellow ≥50%, red <50%)
+  - Visual progress bars
+  - Clickable links to detailed .gcov files
+  - Automatic browser launch
 
 ## 🎯 CMake Options
 
@@ -426,26 +486,26 @@ target_include_directories(mylib PUBLIC
 
 #### Automated Release (Recommended)
 
-Use the included `release.ps1` script for automated version management:
+Use the included `release.cmake` script for cross-platform version management:
 
-```powershell
+```bash
 # Bump patch version (1.0.0 → 1.0.1)
-.\release.ps1 -BumpVersion patch
+cmake -DBUMP_VERSION=patch -P release.cmake
 
 # Bump minor version (1.0.0 → 1.1.0)
-.\release.ps1 -BumpVersion minor
+cmake -DBUMP_VERSION=minor -P release.cmake
 
 # Bump major version (1.0.0 → 2.0.0)
-.\release.ps1 -BumpVersion major
+cmake -DBUMP_VERSION=major -P release.cmake
 
 # Set specific version
-.\release.ps1 -Version 2.0.0
+cmake -DVERSION=2.0.0 -P release.cmake
 
 # Create GitHub release (requires gh CLI)
-.\release.ps1 -BumpVersion patch -CreateGitHubRelease
+cmake -DBUMP_VERSION=patch -DCREATE_GITHUB_RELEASE=ON -P release.cmake
 
 # Preview changes without executing
-.\release.ps1 -BumpVersion minor -DryRun
+cmake -DBUMP_VERSION=minor -DDRY_RUN=ON -P release.cmake
 ```
 
 **What the script does:**
@@ -455,12 +515,14 @@ Use the included `release.ps1` script for automated version management:
 4. ✅ Commits the version change
 5. ✅ Creates annotated Git tag (e.g., v1.0.0)
 6. ✅ Pushes tag to remote
-7. ✅ Optionally creates GitHub release (with `-CreateGitHubRelease`)
+7. ✅ Optionally creates GitHub release (with `-DCREATE_GITHUB_RELEASE=ON`)
 
 **Requirements:**
 - Git (always required)
-- GitHub CLI (`gh`) - only if using `-CreateGitHubRelease`
+- GitHub CLI (`gh`) - only if using `-DCREATE_GITHUB_RELEASE=ON`
   - Install from: https://cli.github.com/
+
+**Cross-Platform:** Works identically on Windows, Linux, and macOS
 
 #### Manual Git Tagging
 
@@ -597,6 +659,8 @@ static void test_divide_by_zero(void **state) { ... }
 
 ### GitHub Actions Example
 
+**Using new cross-platform scripts:**
+
 ```yaml
 name: Tests
 
@@ -604,20 +668,37 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      
       - name: Install CMake
-        run: sudo apt-get install cmake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.16.x'
+      
       - name: Build and Test
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
-          cmake --build build
-          ctest --test-dir build --output-on-failure
-      - name: Generate Coverage
-        run: |
-          gcov build/CMakeFiles/mylib.dir/src/*.c.gcno
+        run: cmake -DRUN_TESTS=ON -DCOVERAGE=ON -P build.cmake
+      
+      - name: Generate Coverage Report
+        run: cmake -P coverage.cmake
+      
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage/
 ```
+
+**Key Benefits:**
+- ✅ **Cross-platform**: Same commands work on Linux, macOS, and Windows
+- ✅ **Matrix testing**: Test on multiple operating systems simultaneously  
+- ✅ **No platform-specific scripts**: One workflow for all platforms
+- ✅ **Zero additional dependencies**: Only uses CMake (already required)
 
 ## 📖 Additional Documentation
 
@@ -647,11 +728,11 @@ This template is provided as-is for use in your projects. Customize as needed.
 - [ ] Add library source files to `src/`
 - [ ] Add public headers to `include/<libname>/`
 - [ ] Write unit tests in `test/unit/`
-- [ ] Build and run tests: `.\build.ps1 -RunTests`
-- [ ] Check coverage: `.\coverage.ps1 -GenerateHtml`
+- [ ] Build and run tests: `cmake -DRUN_TESTS=ON -P build.cmake`
+- [ ] Check coverage: `cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake && cmake -DGENERATE_HTML=ON -P coverage.cmake`
 - [ ] Configure VS Code debugging
 - [ ] Update README with library-specific details
-- [ ] Tag first release: `git tag v0.1.0`
+- [ ] Tag first release: `cmake -DVERSION=0.1.0 -P release.cmake`
 
 ## 🎓 Resources
 
@@ -662,6 +743,6 @@ This template is provided as-is for use in your projects. Customize as needed.
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-17  
+**Version**: 1.0.2  
+**Last Updated**: 2026-03-16  
 **Status**: ✅ Production Ready
