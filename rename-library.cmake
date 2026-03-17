@@ -173,7 +173,7 @@ message("")
 # ==============================================================================
 # STEP 1: Update project() declaration in CMakeLists.txt
 # ==============================================================================
-message("[1/4] Updating CMakeLists.txt project() declaration...")
+message("[1/5] Updating CMakeLists.txt project() declaration...")
 
 file(READ "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" ROOT_CMAKE)
 
@@ -217,7 +217,7 @@ message("    All CMake targets auto-update via \${PROJECT_NAME}!")
 # ==============================================================================
 # STEP 2: Rename include directory
 # ==============================================================================
-message("[2/4] Renaming include directory...")
+message("[2/5] Renaming include directory...")
 
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/${OLD_NAME}")
     message("  include/${OLD_NAME} -> include/${NEW_NAME}")
@@ -230,7 +230,7 @@ endif()
 # ==============================================================================
 # STEP 3: Rename source files (recommended for single-module libraries)
 # ==============================================================================
-message("[3/4] Renaming source files...")
+message("[3/5] Renaming source files...")
 
 # Rename header file
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${OLD_MODULE}.h")
@@ -260,9 +260,32 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/test/unit/test_${OLD_MODULE}.c")
 endif()
 
 # ==============================================================================
-# STEP 4: Update #include statements and file contents
+# STEP 4: Rename configuration files
 # ==============================================================================
-message("[4/4] Updating file contents...")
+message("[4/5] Renaming configuration files...")
+
+# Rename config template file
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/config/${OLD_MODULE}_config.h.template")
+    message("  config/${OLD_MODULE}_config.h.template -> ${NEW_NAME}_config.h.template")
+    file(RENAME 
+        "${CMAKE_CURRENT_LIST_DIR}/config/${OLD_MODULE}_config.h.template"
+        "${CMAKE_CURRENT_LIST_DIR}/config/${NEW_NAME}_config.h.template"
+    )
+endif()
+
+# Rename actual config file
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/cfg/${OLD_MODULE}_config.h")
+    message("  cfg/${OLD_MODULE}_config.h -> ${NEW_NAME}_config.h")
+    file(RENAME 
+        "${CMAKE_CURRENT_LIST_DIR}/cfg/${OLD_MODULE}_config.h"
+        "${CMAKE_CURRENT_LIST_DIR}/cfg/${NEW_NAME}_config.h"
+    )
+endif()
+
+# ==============================================================================
+# STEP 5: Update #include statements and file contents
+# ==============================================================================
+message("[5/5] Updating file contents...")
 
 # Update header file
 set(HEADER_PATH "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${NEW_NAME}.h")
@@ -335,6 +358,52 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.vscode/launch.json")
     
     file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.vscode/launch.json" "${LAUNCH_JSON}")
     message("  - Updated .vscode/launch.json")
+endif()
+
+# Update config template file
+set(CONFIG_TEMPLATE_PATH "${CMAKE_CURRENT_LIST_DIR}/config/${NEW_NAME}_config.h.template")
+if(EXISTS "${CONFIG_TEMPLATE_PATH}")
+    file(READ "${CONFIG_TEMPLATE_PATH}" CONFIG_TEMPLATE_CONTENT)
+    
+    # Update header guard
+    string(TOUPPER "${OLD_MODULE}" OLD_MODULE_UPPER)
+    string(TOUPPER "${NEW_NAME}" NEW_CONFIG_UPPER)
+    string(REPLACE "${OLD_MODULE_UPPER}_CONFIG_H" "${NEW_CONFIG_UPPER}_CONFIG_H" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
+    
+    # Update file name references in comments
+    string(REPLACE "${OLD_MODULE}_config.h" "${NEW_NAME}_config.h" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
+    
+    # Update library name references
+    string(REPLACE "${OLD_MODULE}" "${NEW_NAME}" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
+    
+    # Update macro prefixes (e.g., MYLIB_DIV_BY_ZERO_RETURN -> NEWNAME_DIV_BY_ZERO_RETURN)
+    string(REPLACE "${OLD_MODULE_UPPER}_" "${NEW_CONFIG_UPPER}_" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
+    
+    file(WRITE "${CONFIG_TEMPLATE_PATH}" "${CONFIG_TEMPLATE_CONTENT}")
+    message("  - Updated ${CONFIG_TEMPLATE_PATH}")
+endif()
+
+# Update actual config file
+set(CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}/cfg/${NEW_NAME}_config.h")
+if(EXISTS "${CONFIG_PATH}")
+    file(READ "${CONFIG_PATH}" CONFIG_CONTENT)
+    
+    # Update header guard
+    string(TOUPPER "${OLD_MODULE}" OLD_MODULE_UPPER)
+    string(TOUPPER "${NEW_NAME}" NEW_CONFIG_UPPER)
+    string(REPLACE "${OLD_MODULE_UPPER}_CONFIG_H" "${NEW_CONFIG_UPPER}_CONFIG_H" CONFIG_CONTENT "${CONFIG_CONTENT}")
+    
+    # Update file name references in comments
+    string(REPLACE "${OLD_MODULE}_config.h" "${NEW_NAME}_config.h" CONFIG_CONTENT "${CONFIG_CONTENT}")
+    
+    # Update library name references
+    string(REPLACE "${OLD_MODULE}" "${NEW_NAME}" CONFIG_CONTENT "${CONFIG_CONTENT}")
+    
+    # Update macro prefixes (e.g., MYLIB_DIV_BY_ZERO_RETURN -> NEWNAME_DIV_BY_ZERO_RETURN)
+    string(REPLACE "${OLD_MODULE_UPPER}_" "${NEW_CONFIG_UPPER}_" CONFIG_CONTENT "${CONFIG_CONTENT}")
+    
+    file(WRITE "${CONFIG_PATH}" "${CONFIG_CONTENT}")
+    message("  - Updated ${CONFIG_PATH}")
 endif()
 
 # ==============================================================================

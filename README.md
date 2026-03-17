@@ -65,6 +65,9 @@ cmake -DRUN_TESTS=ON -P build.cmake
 # Clean build
 cmake -DCLEAN=ON -P build.cmake
 
+# Clean only (without rebuilding)
+cmake -DCLEAN_ONLY=ON -P build.cmake
+
 # Build with coverage
 cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake
 

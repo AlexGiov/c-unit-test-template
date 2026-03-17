@@ -93,10 +93,10 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME_UPPER}_SOURCES} ${${PROJECT_NAME_UP
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cfg>  # Configuration visible to headers
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/private
-        ${CMAKE_CURRENT_SOURCE_DIR}/cfg  # Configuration for this build
 )
 
 # Compiler flags for library

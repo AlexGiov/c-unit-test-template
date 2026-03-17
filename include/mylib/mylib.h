@@ -12,6 +12,7 @@
 extern "C" {
 #endif
 
+#include "mylib_config.h"
 /**
  * @brief Add two integers
  *

@@ -18,6 +18,7 @@ cmake_minimum_required(VERSION 3.16)
 #   -DBUILD_TYPE=<type>      Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)
 #                            Default: Debug
 #   -DCLEAN=ON               Clean build directory before building
+#   -DCLEAN_ONLY=ON          Clean build directory and exit (no rebuild)
 #   -DRUN_TESTS=ON           Run unit tests after building
 #   -DCOVERAGE=ON            Enable code coverage (requires RUN_TESTS for report)
 #   -DHELP=ON                Show this help message
@@ -26,6 +27,7 @@ cmake_minimum_required(VERSION 3.16)
 #   cmake -P build.cmake                                     # Build in Debug mode
 #   cmake -DRUN_TESTS=ON -P build.cmake                      # Build and run tests
 #   cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake           # Clean build and test
+#   cmake -DCLEAN_ONLY=ON -P build.cmake                     # Clean without rebuilding
 #   cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake        # Build with coverage
 #   cmake -DBUILD_TYPE=Release -P build.cmake                # Build in Release mode
 #
@@ -45,6 +47,7 @@ if(DEFINED HELP)
     message("  -DBUILD_TYPE=<type>      Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)")
     message("                           Default: Debug")
     message("  -DCLEAN=ON               Clean build directory before building")
+    message("  -DCLEAN_ONLY=ON          Clean build directory and exit (no rebuild)")
     message("  -DRUN_TESTS=ON           Run unit tests after building")
     message("  -DCOVERAGE=ON            Enable code coverage (requires RUN_TESTS for report)")
     message("  -DHELP=ON                Show this help message")
@@ -53,6 +56,7 @@ if(DEFINED HELP)
     message("  cmake -P build.cmake                                     # Build in Debug mode")
     message("  cmake -DRUN_TESTS=ON -P build.cmake                      # Build and run tests")
     message("  cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake           # Clean build and test")
+    message("  cmake -DCLEAN_ONLY=ON -P build.cmake                     # Clean without rebuilding")
     message("  cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake        # Build with coverage")
     message("  cmake -DBUILD_TYPE=Release -P build.cmake                # Build in Release mode")
     message("")
@@ -176,13 +180,20 @@ message("========================================")
 message("")
 
 # Clean build directory if requested
-if(DEFINED CLEAN)
+if(DEFINED CLEAN OR DEFINED CLEAN_ONLY)
     message("[CLEAN] Removing build directory...")
     file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/build")
     file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/bin")
     file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/lib")
+    file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/coverage")
     message("[CLEAN] Done")
     message("")
+    
+    # Exit if clean-only was requested
+    if(DEFINED CLEAN_ONLY)
+        message("[INFO] Clean-only mode: exiting without rebuild")
+        return()
+    endif()
 endif()
 
 # Configure
