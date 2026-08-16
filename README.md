@@ -204,6 +204,13 @@ consumed from application repositories, without waiting for a full repository sp
 ```bash
 # In this repository: create a branch containing only mylib/ (rewritten history)
 git subtree split --prefix=mylib -b lib-export
+git push origin lib-export
+
+# Later, after new commits land on main touching mylib/: re-run the same split.
+# git subtree's cache lets it fast-forward lib-export to the new state - no
+# need to delete/recreate the branch.
+git subtree split --prefix=mylib -b lib-export
+git push origin lib-export
 
 # In the consuming application repository: pull that branch as a subtree
 git subtree add --prefix=external/mylib <this-repo-url> lib-export --squash
