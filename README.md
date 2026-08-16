@@ -203,14 +203,14 @@ consumed from application repositories, without waiting for a full repository sp
 
 ```bash
 # In this repository: create a branch containing only mylib/ (rewritten history)
-git subtree split --prefix=mylib -b mylib-export
+git subtree split --prefix=mylib -b lib-export
 
 # In the consuming application repository: pull that branch as a subtree
-git subtree add --prefix=external/mylib <this-repo-url> mylib-export --squash
+git subtree add --prefix=external/mylib <this-repo-url> lib-export --squash
 
 # Later, to pull updates:
-git fetch <this-repo-url> mylib-export
-git subtree pull --prefix=external/mylib <this-repo-url> mylib-export --squash
+git fetch <this-repo-url> lib-export
+git subtree pull --prefix=external/mylib <this-repo-url> lib-export --squash
 ```
 
 Because `mylib/CMakeLists.txt` is self-sufficient, the consuming app can either
