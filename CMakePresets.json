@@ -1,0 +1,57 @@
+{
+    "version": 5,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 24,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "ucrt64",
+            "displayName": "Windows - MSYS2 UCRT64",
+            "description": "GCC/Ninja from MSYS2 UCRT64 (recommended MSYS2 environment, closest to embedded GCC toolchains)",
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe"
+            },
+            "environment": {
+                "PATH": "C:/msys64/ucrt64/bin${pathListSep}$penv{PATH}"
+            }
+        },
+        {
+            "name": "linux-gcc",
+            "displayName": "Linux - system GCC",
+            "description": "System GCC + Ninja (e.g. sudo apt install gcc ninja-build)",
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "ucrt64",
+            "configurePreset": "ucrt64"
+        },
+        {
+            "name": "linux-gcc",
+            "configurePreset": "linux-gcc"
+        }
+    ]
+}

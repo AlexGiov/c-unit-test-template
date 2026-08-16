@@ -22,6 +22,9 @@ Makefile
 !release.cmake
 !rename-library.cmake
 
+# CMake user-specific presets (machine-local overrides, not versioned)
+CMakeUserPresets.json
+
 # Coverage
 *.gcno
 *.gcda

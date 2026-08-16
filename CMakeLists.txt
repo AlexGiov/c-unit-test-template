@@ -2,20 +2,21 @@
 # Unit Test Template - Main CMakeLists.txt
 # ==============================================================================
 # Professional template for C library unit testing with CMocka
+#
+# The library itself lives entirely under mylib/ (mylib/inc, mylib/src,
+# mylib/config, mylib/CMakeLists.txt) so that folder alone is self-sufficient
+# and can be exported to other repositories (e.g. via `git subtree split
+# --prefix=mylib`) without dragging along this test/dev infrastructure.
+#
+# This root CMakeLists.txt is a thin orchestrator: it wires the dev-only
+# configuration (cfg/) to the library and builds the CMocka-based test suite.
+#
+# The project() declaration below must stay in sync with the one in
+# mylib/CMakeLists.txt (name + version). Renaming: update both files, plus
+# mylib/inc/<old_name>/ -> mylib/inc/<new_name>/.
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.10)
-
-# ==============================================================================
-# PROJECT CONFIGURATION
-# ==============================================================================
-# To rename this library, change the project name below and rename:
-#   - include/mylib/ → include/<new_name>/
-#   - src/mylib.c → src/<new_name>.c (if using single-module convention)
-#   - test/unit/test_mylib.c → test/unit/test_<new_name>.c
-#
-# All CMake targets, exports, and install paths will automatically use the
-# new project name via ${PROJECT_NAME} variable.
 
 project(mylib
     VERSION 2.0.2
@@ -23,142 +24,44 @@ project(mylib
     LANGUAGES C
 )
 
-# Derived variables (auto-configured from project name)
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
+
+# Build options
+option(BUILD_TESTING "Build unit tests" ON)
+option(ENABLE_COVERAGE "Enable code coverage analysis" OFF)
 
 # Verify Ninja generator is being used
 if(NOT CMAKE_GENERATOR MATCHES "Ninja")
     message(WARNING 
         "This project requires Ninja build system.\n"
         "  Current generator: ${CMAKE_GENERATOR}\n"
-        "  Use the build.cmake script: cmake -P build.cmake\n"
+        "  Use a preset instead: cmake --preset ucrt64 (Windows) / cmake --preset linux-gcc (Linux)\n"
     )
 endif()
 
-# C Standard
+# C Standard (inherited by mylib/ and test/ subdirectories)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# Build options
-option(BUILD_TESTING "Build unit tests" ON)
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-option(INSTALL_SOURCES "Install source files for embedded integration" ON)
-option(ENABLE_COVERAGE "Enable code coverage analysis" OFF)
-
-# Output directories
+# Output directories (shared by mylib/ and test/)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
-# ==============================================================================
-# Compiler flags
-# ==============================================================================
-
-# Warning flags
-set(WARNING_FLAGS
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Wformat=2
-    -Wno-unused-parameter
-)
-
-# Debug flags
+# Debug/Release flags
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
-
-# Release flags
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 # ==============================================================================
-# Library: ${PROJECT_NAME}
+# Library: mylib/ (self-contained, see mylib/CMakeLists.txt)
 # ==============================================================================
+# cfg/ is the dev/test-only configuration (NOT part of the mylib/ deliverable,
+# see README_LIBRARY_STRUCTURE.md): point mylib at it before adding the subdirectory.
+set(${PROJECT_NAME_UPPER}_CONFIG_DIR "${CMAKE_SOURCE_DIR}/cfg"
+    CACHE PATH "Directory containing ${PROJECT_NAME}_config.h" FORCE)
 
-# Source files
-# Note: For single-module libraries, name your main file src/${PROJECT_NAME}.c
-# For multi-module libraries, list all source files explicitly
-set(${PROJECT_NAME_UPPER}_SOURCES
-    src/mylib.c
-)
-
-# Header files (for IDE support)
-set(${PROJECT_NAME_UPPER}_HEADERS
-    include/${PROJECT_NAME}/mylib.h
-)
-
-# Create library
-add_library(${PROJECT_NAME} ${${PROJECT_NAME_UPPER}_SOURCES} ${${PROJECT_NAME_UPPER}_HEADERS})
-
-# Include directories
-target_include_directories(${PROJECT_NAME}
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cfg>  # Configuration visible to headers
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/private
-)
-
-# Compiler flags for library
-target_compile_options(${PROJECT_NAME} PRIVATE ${WARNING_FLAGS})
-
-# Code coverage support
-if(ENABLE_COVERAGE)
-    message(STATUS "Code coverage enabled")
-    target_compile_options(${PROJECT_NAME} PRIVATE --coverage -fprofile-arcs -ftest-coverage)
-    target_link_options(${PROJECT_NAME} PRIVATE --coverage)
-endif()
-
-# Set library properties
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "${${PROJECT_NAME_UPPER}_HEADERS}"
-)
-
-# ==============================================================================
-# Installation
-# ==============================================================================
-
-include(GNUInstallDirs)
-
-# Install library
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
-)
-
-# Install headers
-install(DIRECTORY include/${PROJECT_NAME}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING PATTERN "*.h"
-)
-
-# Install sources (for embedded projects)
-if(INSTALL_SOURCES)
-    install(DIRECTORY src/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/src/${PROJECT_NAME}
-        FILES_MATCHING PATTERN "*.c"
-        PATTERN "private" EXCLUDE
-    )
-    message(STATUS "Source installation enabled (for embedded integration)")
-endif()
-
-# Install configuration template
-install(DIRECTORY config/
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/config/${PROJECT_NAME}
-    FILES_MATCHING PATTERN "*.template"
-)
-
-# Install CMake config files
-install(EXPORT ${PROJECT_NAME}Targets
-    FILE ${PROJECT_NAME}Targets.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
+add_subdirectory(mylib)
 
 # ==============================================================================
 # Testing
@@ -183,6 +86,6 @@ message(STATUS "C Compiler:       ${CMAKE_C_COMPILER}")
 message(STATUS "Install prefix:   ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Build testing:    ${BUILD_TESTING}")
 message(STATUS "Code coverage:    ${ENABLE_COVERAGE}")
-message(STATUS "Install sources:  ${INSTALL_SOURCES}")
 message(STATUS "========================================")
 message(STATUS "")
+

@@ -133,7 +133,7 @@ function(get_bumped_version CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH BUMP_TYPE 
     set(${NEW_VERSION} "${MAJOR}.${MINOR}.${PATCH}" PARENT_SCOPE)
 endfunction()
 
-# Update version in CMakeLists.txt
+# Update version in CMakeLists.txt (and mylib/CMakeLists.txt, kept in sync)
 function(update_cmake_version NEW_VERSION)
     file(READ "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" CONTENT)
     
@@ -151,6 +151,23 @@ function(update_cmake_version NEW_VERSION)
         endif()
     else()
         message(FATAL_ERROR "[ERROR] Could not find VERSION in CMakeLists.txt project() declaration")
+    endif()
+
+    # mylib/CMakeLists.txt is self-sufficient and declares its own VERSION; keep it in sync
+    set(MYLIB_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/mylib/CMakeLists.txt")
+    if(EXISTS "${MYLIB_CMAKE_PATH}")
+        file(READ "${MYLIB_CMAKE_PATH}" MYLIB_CONTENT)
+        if(MYLIB_CONTENT MATCHES "(project[^)]*VERSION[ \t\n]+)[0-9]+\\.[0-9]+\\.[0-9]+")
+            string(REGEX REPLACE "(project[^)]*VERSION[ \t\n]+)[0-9]+\\.[0-9]+\\.[0-9]+" 
+                   "\\1${NEW_VERSION}" MYLIB_NEW_CONTENT "${MYLIB_CONTENT}")
+            
+            if(NOT DEFINED DRY_RUN)
+                file(WRITE "${MYLIB_CMAKE_PATH}" "${MYLIB_NEW_CONTENT}")
+                message("[UPDATE] mylib/CMakeLists.txt version updated to ${NEW_VERSION}")
+            else()
+                message("[DRY RUN] Would update mylib/CMakeLists.txt version to ${NEW_VERSION}")
+            endif()
+        endif()
     endif()
 endfunction()
 
@@ -294,7 +311,7 @@ message("")
 # Commit changes (skip in dry run)
 if(NOT DEFINED DRY_RUN)
     execute_process(
-        COMMAND git add CMakeLists.txt
+        COMMAND git add CMakeLists.txt mylib/CMakeLists.txt
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     )
     

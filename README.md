@@ -19,8 +19,10 @@ Professional template for unit testing C libraries with CMocka framework, design
 
 ### Prerequisites
 
-- CMake 3.16+
+- CMake 3.24+ (required for conditional presets in `CMakePresets.json`)
 - GCC or compatible C compiler
+  - **Windows**: [MSYS2](https://www.msys2.org/) UCRT64 environment (recommended - MSYS2's own MINGW64 environment is deprecated as of 2026). Install MSYS2, then `pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-gdb` and make sure `C:\msys64\ucrt64\bin` is on your `PATH`.
+  - **Linux/macOS**: system GCC (e.g. `sudo apt install gcc`)
 - gcov (for coverage analysis)
 - **Ninja build system** - **REQUIRED** for optimal performance and cross-platform consistency
 - Git (for version management)
@@ -53,10 +55,28 @@ brew install ninja
 
 ### Build and Test
 
-**Cross-Platform (Works on Windows, Linux, macOS):**
+**Using CMakePresets.json (recommended, IDE-friendly):**
 
 ```bash
-# Build project
+# Windows (MSYS2 UCRT64)
+cmake --preset ucrt64
+cmake --build --preset ucrt64
+
+# Linux
+cmake --preset linux-gcc
+cmake --build --preset linux-gcc
+```
+
+The preset to use depends on the platform, not on personal choice: `ucrt64` is only
+valid on Windows and `linux-gcc` only on Linux (enforced via the `condition` field
+in `CMakePresets.json`), so the commands above are not interchangeable between OSes.
+To override the compiler location, create a local (untracked) `CMakeUserPresets.json`
+that inherits from one of these presets.
+
+**Cross-Platform wrapper (works identically on Windows, Linux, macOS):**
+
+```bash
+# Build project (auto-selects the right preset for your OS)
 cmake -P build.cmake
 
 # Build with tests
@@ -77,15 +97,17 @@ cmake -P coverage.cmake
 
 **Platform-Specific Configuration:**
 
-The scripts automatically detect your environment:
+Generator and compiler are defined declaratively in `CMakePresets.json`:
 
-- **Build System**: Ninja (required) - automatically detected
-- **Compiler Auto-Detection**: GCC is found automatically in system PATH or common installation locations
-- **Cross-Platform**: Same commands work identically on Windows, Linux, and macOS
+- **Build System**: Ninja (required), set by the preset
+- **Compiler**: `ucrt64` preset -> MSYS2 UCRT64 GCC; `linux-gcc` preset -> system GCC
+- **Cross-Platform**: `build.cmake` auto-selects the right preset for your OS
 
 **Custom Configuration (Advanced):**
 
-Override auto-detection with environment variables:
+To point to a different compiler location, create a local `CMakeUserPresets.json`
+(not tracked by Git) that inherits from `ucrt64`/`linux-gcc`, or override via
+environment variable (still supported as an escape hatch by `build.cmake`):
 ```powershell
 # Windows
 $env:CMAKE_C_COMPILER = "C:\custom\path\gcc.exe"
@@ -104,30 +126,37 @@ export GCOV_EXECUTABLE=/usr/bin/gcov
 
 ## 📁 Directory Structure
 
-The template is organized into two main parts: the **core library** (deliverable) and the **development infrastructure** (testing & tooling).
+The template is organized into two main parts: the **`mylib/` library** (self-contained,
+deliverable) and the **development infrastructure** (testing & tooling) around it.
 
-### Core Library Structure (Installable)
+### Core Library: `mylib/` (Installable, exportable)
 
-This is what gets installed and integrated into your application:
+Everything the library needs lives under a single root, `mylib/`, on purpose:
+this is the folder that gets exported to other repositories once the library
+is stable (see [Exporting `mylib/` with git subtree](#-exporting-mylib-with-git-subtree)
+below). It has its own `CMakeLists.txt` and configures/builds standalone.
 
 ```
 unit_test_template/
-├── include/mylib/          # Public API headers
-│   └── mylib.h             # Public interface
-├── src/                    # Library implementation
-│   ├── mylib.c             # Implementation files
-│   └── private/            # Private implementation (not installed)
-└── config/                 # Configuration templates
-    └── mylib_config.h.template  # Configuration example
+└── mylib/
+    ├── CMakeLists.txt          # Self-contained: project(), target, install rules
+    ├── inc/                    # Public API headers
+    │   └── mylib.h             # Public interface
+    ├── src/                    # Library implementation
+    │   ├── mylib.c             # Implementation files
+    │   └── private/            # Private implementation (not installed)
+    └── config/                 # Configuration templates
+        └── mylib_config.h.template  # Configuration example
 ```
 
 **Why this structure?**
-- `include/mylib/` - Uses namespace subfolder to avoid header name collisions
-- `src/` - Contains implementation; installable for embedded integration
-- `src/private/` - Internal implementation details (excluded from install)
-- `config/` - Template for application-specific configuration
+- `mylib/` - Single root folder so the library can be split into its own branch/repo as-is
+- `mylib/inc/` - Public headers directly under `mylib/`, no extra namespace subfolder
+- `mylib/src/` - Contains implementation; installable for embedded integration
+- `mylib/src/private/` - Internal implementation details (excluded from install)
+- `mylib/config/` - Template for application-specific configuration
 
-### Development Infrastructure (Non-installable)
+### Development Infrastructure (Non-installable, stays outside `mylib/`)
 
 Tools and tests for library development:
 
@@ -146,26 +175,53 @@ unit_test_template/
 │       ├── include/
 │       └── src/
 ├── cmake/                  # Build system configuration
-│   ├── toolchain-mingw.cmake
 │   └── README.md
 ├── build/                  # Build artifacts (gitignored)
 ├── bin/                    # Test executables (gitignored)
 ├── lib/                    # Compiled libraries (gitignored)
 ├── coverage/               # Coverage reports (gitignored)
 ├── .vscode/                # VS Code integration
+├── CMakePresets.json       # Toolchain presets (ucrt64 / linux-gcc)
 ├── build.cmake             # Cross-platform build automation
 ├── coverage.cmake          # Cross-platform coverage report generator
 ├── release.cmake           # Cross-platform version management
 ├── rename-library.cmake    # Library renaming utility (cross-platform)
-└── CMakeLists.txt          # Build configuration
+└── CMakeLists.txt          # Thin orchestrator (add_subdirectory(mylib), tests)
 ```
 
 **Development vs Production:**
-- Test infrastructure stays in the library repository
-- `cfg/` contains the actual config used for testing (NOT installed)
-- `config/` contains templates for applications to copy and customize
-- Only `include/`, `src/`, and `config/` templates are installed
+- Test infrastructure stays in this repository, outside `mylib/`
+- `cfg/` contains the actual config used for testing (NOT installed, NOT part of `mylib/`)
+- `mylib/config/` contains templates for applications to copy and customize
+- Only `mylib/inc/`, `mylib/src/`, and `mylib/config/` templates are installed
 - Application gets clean library without test dependencies
+
+## 🌿 Exporting `mylib/` with git subtree
+
+Once the library is stable, `mylib/` can be extracted into its own branch and
+consumed from application repositories, without waiting for a full repository split:
+
+```bash
+# In this repository: create a branch containing only mylib/ (rewritten history)
+git subtree split --prefix=mylib -b mylib-export
+
+# In the consuming application repository: pull that branch as a subtree
+git subtree add --prefix=external/mylib <this-repo-url> mylib-export --squash
+
+# Later, to pull updates:
+git fetch <this-repo-url> mylib-export
+git subtree pull --prefix=external/mylib <this-repo-url> mylib-export --squash
+```
+
+Because `mylib/CMakeLists.txt` is self-sufficient, the consuming app can either
+`add_subdirectory(external/mylib)` or configure/build it standalone. Point
+`MYLIB_CONFIG_DIR` at the app's own `cfg/` **before** `add_subdirectory(mylib)`
+to supply the real `mylib_config.h` (see `mylib/CMakeLists.txt` comments).
+
+This mirrors what `git submodule add <repo-url> external/mylib` would look
+like once the library moves to its own repository - subtree is the lower-friction
+stepping stone: consumers don't need to learn submodule workflows, and history
+is squashed into a single commit per pull.
 
 ## 🛠️ Renaming the Template Library
 
@@ -185,14 +241,14 @@ cmake -DNEW_NAME=sensor_driver -P rename-library.cmake
 cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake
 
 # 4. Implement your library code
-#    - Edit src/sensor_driver.c
-#    - Edit include/sensor_driver/sensor_driver.h
+#    - Edit mylib/src/sensor_driver.c
+#    - Edit mylib/inc/sensor_driver.h
 #    - Write tests in test/unit/test_sensor_driver.c
 ```
 
 **What the script does (simplified):**
-1. ✅ Changes `project(mylib)` → `project(sensor_driver)` in CMakeLists.txt
-2. ✅ Renames `include/mylib/` → `include/sensor_driver/`
+1. ✅ Changes `project(mylib)` → `project(sensor_driver)` in `CMakeLists.txt` and `mylib/CMakeLists.txt`
+2. ✅ Renames `mylib/inc/mylib.h` → `mylib/inc/sensor_driver.h`
 3. ✅ Renames source files: `mylib.*` → `sensor_driver.*`
 4. ✅ Updates `#include` statements in C files
 5. ✅ Updates README.md references
@@ -214,10 +270,10 @@ cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake
 
 If you prefer to do it manually:
 
-### 1. Update CMakeLists.txt
+### 1. Update CMakeLists.txt (both files)
 
 ```cmake
-# Change only this line:
+# Change this line in CMakeLists.txt AND mylib/CMakeLists.txt:
 project(mylib VERSION 1.0.0 LANGUAGES C)  
 # to:
 project(your_library_name VERSION 1.0.0 LANGUAGES C)
@@ -228,23 +284,22 @@ project(your_library_name VERSION 1.0.0 LANGUAGES C)
 ### 2. Rename Directories and Files
 
 ```powershell
-# Rename include directory
-mv include/mylib include/your_library_name
+# Rename the header (directly under mylib/inc/, no namespace subfolder)
+mv mylib/inc/mylib.h mylib/inc/your_library_name.h
 
 # Rename source files (if single-module library)
-mv src/mylib.c src/your_library_name.c
-mv include/your_library_name/mylib.h include/your_library_name/your_library_name.h
+mv mylib/src/mylib.c mylib/src/your_library_name.c
 mv test/unit/test_mylib.c test/unit/test_your_library_name.c
 ```
 
 ### 3. Update #include Statements
 
 ```c
-// In src/your_library_name.c
-#include "your_library_name/your_library_name.h"
+// In mylib/src/your_library_name.c
+#include "your_library_name.h"
 
 // In test/unit/test_your_library_name.c
-#include "your_library_name/your_library_name.h"
+#include "your_library_name.h"
 ```
 
 ### 4. Update README.md
@@ -266,19 +321,19 @@ This template follows **CMake best practices** for relocatable packages:
 ### File Naming Convention
 
 For **single-module libraries** (most common):
-- Use: `src/${PROJECT_NAME}.c` and `include/${PROJECT_NAME}/${PROJECT_NAME}.h`
-- Example: `sensor_driver` → `src/sensor_driver.c`
+- Use: `mylib/src/${PROJECT_NAME}.c` and `mylib/inc/${PROJECT_NAME}.h`
+- Example: `sensor_driver` → `mylib/src/sensor_driver.c`, `mylib/inc/sensor_driver.h`
 
 For **multi-module libraries**:
 - Use descriptive module names
-- Example: `uart_driver` → `src/uart_tx.c`, `src/uart_rx.c`, `src/uart_config.c`
+- Example: `uart_driver` → `mylib/src/uart_tx.c`, `mylib/src/uart_rx.c`, `mylib/src/uart_config.c`
 
 ### How It Works Under the Hood
 
 The template leverages CMake variables for maximum flexibility:
 
 ```cmake
-# In CMakeLists.txt - Single source of truth:
+# In mylib/CMakeLists.txt - Single source of truth:
 project(mylib VERSION 1.0.0 LANGUAGES C)
 
 # Auto-derived variable:
@@ -290,7 +345,7 @@ target_include_directories(${PROJECT_NAME} ...)
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets ...)
 
 # Install paths use variables:
-install(DIRECTORY include/${PROJECT_NAME}/ ...)
+install(TARGETS ${PROJECT_NAME} PUBLIC_HEADER DESTINATION include/${PROJECT_NAME} ...)
 install(FILES ... DESTINATION cmake/${PROJECT_NAME})
 ```
 
@@ -311,19 +366,19 @@ git clone <repo-url> my-library-tests
 cd my-library-tests
 
 # Update library name
-# Edit CMakeLists.txt: project(mylib) -> project(your_lib_name)
+# Edit CMakeLists.txt AND mylib/CMakeLists.txt: project(mylib) -> project(your_lib_name)
 ```
 
 ### 2. Add Your Library Sources
 
 ```bash
 # Add headers
-include/your_lib_name/your_module.h
+mylib/inc/your_module.h
 
 # Add implementation
-src/your_module.c
+mylib/src/your_module.c
 
-# Update CMakeLists.txt MYLIB_SOURCES variable
+# Update mylib/CMakeLists.txt MYLIB_SOURCES variable
 ```
 
 ### 3. Write Tests
@@ -480,7 +535,7 @@ add_library(mylib
 )
 
 target_include_directories(mylib PUBLIC
-    ${VENDOR_DIR}/mylib/include
+    ${VENDOR_DIR}/mylib/inc
     ${CMAKE_SOURCE_DIR}/cfg  # Your config
 )
 ```
@@ -549,8 +604,8 @@ git clone --branch v1.0.0 <repo-url> vendor/mylib
 
 This template follows professional C library organization:
 
-- **Namespace headers** - `include/mylib/` prevents naming conflicts
-- **Separate public/private** - Only `include/` is public API
+- **Flat public headers** - `mylib/inc/` holds headers directly, no extra namespace subfolder in the source tree (install still namespaces them under `include/mylib/`)
+- **Separate public/private** - Only `mylib/inc/` is public API
 - **Template config** - Library provides template, app provides actual config
 - **Optional configuration** - Library works with or without config file
 - **Source installation** - Enables embedded system integration
@@ -564,13 +619,13 @@ The template includes a simple `mylib` library as an example:
 ### Library Code
 
 ```c
-// include/mylib/mylib.h
+// mylib/inc/mylib.h
 int add(int a, int b);
 int subtract(int a, int b);
 int multiply(int a, int b);
 int divide(int a, int b);
 
-// src/mylib.c
+// mylib/src/mylib.c
 int add(int a, int b) { return a + b; }
 int divide(int a, int b) {
     if (b == 0) return 0;  // Safety check

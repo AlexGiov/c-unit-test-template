@@ -6,12 +6,10 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/build.ps1"
+                "-P",
+                "build.cmake"
             ],
             "group": {
                 "kind": "build",
@@ -32,13 +30,11 @@
         {
             "label": "build (clean)",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/build.ps1",
-                "-Clean"
+                "-DCLEAN=ON",
+                "-P",
+                "build.cmake"
             ],
             "group": "build",
             "presentation": {
@@ -56,13 +52,11 @@
         {
             "label": "test",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/build.ps1",
-                "-RunTests"
+                "-DRUN_TESTS=ON",
+                "-P",
+                "build.cmake"
             ],
             "group": {
                 "kind": "test",
@@ -81,10 +75,11 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-Command",
-                "Remove-Item -Recurse -Force build,bin,lib -ErrorAction SilentlyContinue"
+                "-DCLEAN_ONLY=ON",
+                "-P",
+                "build.cmake"
             ],
             "group": "build",
             "presentation": {
@@ -100,10 +95,10 @@
         {
             "label": "configure",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-Command",
-                "$env:PATH = 'C:\\devbin\\cmake\\v3.16.5\\bin;' + $env:PATH; $env:PATH = $env:PATH -replace 'C:/devbin/cygwin/v1a/bin;?', ''; cmake -G 'MinGW Makefiles' -S . -B build -DCMAKE_C_COMPILER=C:/devbin/mingw/mingw64/8.1.0/bin/gcc.exe -DCMAKE_BUILD_TYPE=Debug"
+                "--preset",
+                "ucrt64"
             ],
             "group": "build",
             "presentation": {
@@ -119,14 +114,12 @@
         {
             "label": "coverage",
             "type": "shell",
-            "command": "powershell",
+            "command": "cmake",
             "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/build.ps1",
-                "-Coverage",
-                "-RunTests"
+                "-DCOVERAGE=ON",
+                "-DRUN_TESTS=ON",
+                "-P",
+                "build.cmake"
             ],
             "group": "test",
             "presentation": {

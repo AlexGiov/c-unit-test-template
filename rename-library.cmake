@@ -4,8 +4,9 @@
 # Renames the template library to a new name
 # 
 # With the new CMake-based approach, renaming is much simpler:
-# - Change project() name in CMakeLists.txt (automatic via CMake variables)
-# - Rename include/ directory
+# - Change project() name in CMakeLists.txt AND mylib/CMakeLists.txt (both must
+#   stay in sync, see mylib/CMakeLists.txt header comment)
+# - Rename mylib/inc/ directory
 # - Rename source files (optional, recommended for single-module libraries)
 # - Update #include statements
 # - Update README references
@@ -32,11 +33,10 @@ cmake_minimum_required(VERSION 3.16)
 #   cmake -DNEW_NAME=uart_hal -P rename-library.cmake
 #
 # WHAT IT DOES (Simplified with CMake variables):
-#   1. Updates project() name in CMakeLists.txt
-#   2. Renames include/mylib/ -> include/<NEW_NAME>/
+#   1. Updates project() name in CMakeLists.txt and mylib/CMakeLists.txt
+#   2. Renames mylib/inc/mylib.h -> mylib/inc/<NEW_NAME>.h
 #   3. Renames source files (recommended for single-module)
-#   4. Updates #include statements
-#   5. Updates README.md references
+#   4. Updates #include statements and README.md references
 #
 #   All CMake targets auto-update via ${PROJECT_NAME}!
 #
@@ -60,11 +60,10 @@ if(DEFINED HELP)
     message("  cmake -DNEW_NAME=uart_hal -P rename-library.cmake")
     message("")
     message("WHAT IT DOES (Simplified with CMake variables):")
-    message("  1. Updates project() name in CMakeLists.txt")
-    message("  2. Renames include/mylib/ -> include/<NEW_NAME>/")
+    message("  1. Updates project() name in CMakeLists.txt and mylib/CMakeLists.txt")
+    message("  2. Renames mylib/inc/mylib.h -> mylib/inc/<NEW_NAME>.h")
     message("  3. Renames source files (recommended for single-module)")
-    message("  4. Updates #include statements")
-    message("  5. Updates README.md references")
+    message("  4. Updates #include statements and README.md references")
     message("")
     message("  All CMake targets auto-update via \${PROJECT_NAME}!")
     message("")
@@ -140,8 +139,8 @@ function(get_current_project_name OUTPUT_VAR)
 endfunction()
 
 function(get_current_module_name OUTPUT_VAR)
-    # Find first .c file in src/ directory
-    file(GLOB SRC_FILES "${CMAKE_CURRENT_LIST_DIR}/src/*.c")
+    # Find first .c file in mylib/src/ directory
+    file(GLOB SRC_FILES "${CMAKE_CURRENT_LIST_DIR}/mylib/src/*.c")
     if(SRC_FILES)
         list(GET SRC_FILES 0 FIRST_FILE)
         get_filename_component(MODULE_NAME "${FIRST_FILE}" NAME_WE)
@@ -173,7 +172,7 @@ message("")
 # ==============================================================================
 # STEP 1: Update project() declaration in CMakeLists.txt
 # ==============================================================================
-message("[1/5] Updating CMakeLists.txt project() declaration...")
+message("[1/4] Updating CMakeLists.txt project() declaration...")
 
 file(READ "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" ROOT_CMAKE)
 
@@ -189,64 +188,47 @@ string(REGEX REPLACE
 # Update source file references
 string(REPLACE "src/${OLD_MODULE}.c" "src/${NEW_NAME}.c" ROOT_CMAKE "${ROOT_CMAKE}")
 
-# Update header references - handle multiple formats:
-# 1. include/${PROJECT_NAME}/oldfile.h (variable-based)
-# 2. include/oldname/oldfile.h (hardcoded old name)
-# Both should become: include/${PROJECT_NAME}/newfile.h
-
-# For hardcoded paths (include/mylib/mylib.h -> include/${PROJECT_NAME}/sensor_driver.h)
-string(REGEX REPLACE 
-    "include/${OLD_NAME}/${OLD_MODULE}\\.h"
-    "include/\${PROJECT_NAME}/${NEW_NAME}.h"
-    ROOT_CMAKE 
-    "${ROOT_CMAKE}"
-)
-
-# For variable-based paths (include/${PROJECT_NAME}/mylib.h -> include/${PROJECT_NAME}/sensor_driver.h)
-string(REGEX REPLACE 
-    "include/\\\$\\{PROJECT_NAME\\}/${OLD_MODULE}\\.h"
-    "include/\${PROJECT_NAME}/${NEW_NAME}.h"
-    ROOT_CMAKE 
-    "${ROOT_CMAKE}"
-)
-
 file(WRITE "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" "${ROOT_CMAKE}")
-message("  - Changed project(${OLD_NAME}) -> project(${NEW_NAME})")
+message("  - Changed project(${OLD_NAME}) -> project(${NEW_NAME}) in CMakeLists.txt")
+
+# mylib/CMakeLists.txt must stay in sync (it is self-sufficient, see its header comment)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/mylib/CMakeLists.txt" MYLIB_CMAKE)
+
+string(REGEX REPLACE 
+    "project[ \t]*\\([ \t\n]*${OLD_NAME}([ \t\n])"
+    "project(${NEW_NAME}\\1"
+    MYLIB_CMAKE 
+    "${MYLIB_CMAKE}"
+)
+
+# Update source/header references (inc/oldfile.h -> inc/newfile.h, flat - no namespace subfolder)
+string(REPLACE "src/${OLD_MODULE}.c" "src/${NEW_NAME}.c" MYLIB_CMAKE "${MYLIB_CMAKE}")
+string(REPLACE "inc/${OLD_MODULE}.h" "inc/${NEW_NAME}.h" MYLIB_CMAKE "${MYLIB_CMAKE}")
+
+file(WRITE "${CMAKE_CURRENT_LIST_DIR}/mylib/CMakeLists.txt" "${MYLIB_CMAKE}")
+message("  - Changed project(${OLD_NAME}) -> project(${NEW_NAME}) in mylib/CMakeLists.txt")
 message("    All CMake targets auto-update via \${PROJECT_NAME}!")
 
 # ==============================================================================
-# STEP 2: Rename include directory
+# STEP 2: Rename source and header files (recommended for single-module libraries)
 # ==============================================================================
-message("[2/5] Renaming include directory...")
+message("[2/4] Renaming source and header files...")
 
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/${OLD_NAME}")
-    message("  include/${OLD_NAME} -> include/${NEW_NAME}")
+# Rename header file (flat, directly under mylib/inc/ - no namespace subfolder)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${OLD_MODULE}.h")
+    message("  mylib/inc/${OLD_MODULE}.h -> ${NEW_NAME}.h")
     file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/include/${OLD_NAME}" 
-        "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}"
-    )
-endif()
-
-# ==============================================================================
-# STEP 3: Rename source files (recommended for single-module libraries)
-# ==============================================================================
-message("[3/5] Renaming source files...")
-
-# Rename header file
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${OLD_MODULE}.h")
-    message("  include/${NEW_NAME}/${OLD_MODULE}.h -> ${NEW_NAME}.h")
-    file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${OLD_MODULE}.h"
-        "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${NEW_NAME}.h"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${OLD_MODULE}.h"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${NEW_NAME}.h"
     )
 endif()
 
 # Rename source file
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${OLD_MODULE}.c")
-    message("  src/${OLD_MODULE}.c -> ${NEW_NAME}.c")
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/mylib/src/${OLD_MODULE}.c")
+    message("  mylib/src/${OLD_MODULE}.c -> ${NEW_NAME}.c")
     file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/src/${OLD_MODULE}.c"
-        "${CMAKE_CURRENT_LIST_DIR}/src/${NEW_NAME}.c"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/src/${OLD_MODULE}.c"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/src/${NEW_NAME}.c"
     )
 endif()
 
@@ -260,35 +242,22 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/test/unit/test_${OLD_MODULE}.c")
 endif()
 
 # ==============================================================================
-# STEP 4: Rename configuration files
+# STEP 3: Configuration files (intentionally NOT renamed)
 # ==============================================================================
-message("[4/5] Renaming configuration files...")
-
-# Rename config template file
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/config/${OLD_MODULE}_config.h.template")
-    message("  config/${OLD_MODULE}_config.h.template -> ${NEW_NAME}_config.h.template")
-    file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/config/${OLD_MODULE}_config.h.template"
-        "${CMAKE_CURRENT_LIST_DIR}/config/${NEW_NAME}_config.h.template"
-    )
-endif()
-
-# Rename actual config file
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/cfg/${OLD_MODULE}_config.h")
-    message("  cfg/${OLD_MODULE}_config.h -> ${NEW_NAME}_config.h")
-    file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/cfg/${OLD_MODULE}_config.h"
-        "${CMAKE_CURRENT_LIST_DIR}/cfg/${NEW_NAME}_config.h"
-    )
-endif()
+# mylib.h/mylib.c always do `#include "mylib_config.h"` (a fixed literal name,
+# not derived from ${PROJECT_NAME}), and its macros (e.g. MYLIB_DIV_BY_ZERO_RETURN)
+# are likewise fixed literals in the source. Renaming mylib_config.h or its
+# macros here would silently break the build, so both mylib/config/mylib_config.h.template
+# and cfg/mylib_config.h keep their name across a library rename.
+message("[3/4] Configuration files: kept as mylib_config.h (see mylib.h #include)...")
 
 # ==============================================================================
-# STEP 5: Update #include statements and file contents
+# STEP 4: Update #include statements and file contents
 # ==============================================================================
-message("[5/5] Updating file contents...")
+message("[4/4] Updating file contents...")
 
 # Update header file
-set(HEADER_PATH "${CMAKE_CURRENT_LIST_DIR}/include/${NEW_NAME}/${NEW_NAME}.h")
+set(HEADER_PATH "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${NEW_NAME}.h")
 if(EXISTS "${HEADER_PATH}")
     file(READ "${HEADER_PATH}" HEADER_CONTENT)
     
@@ -304,11 +273,11 @@ if(EXISTS "${HEADER_PATH}")
 endif()
 
 # Update source file
-set(SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}/src/${NEW_NAME}.c")
+set(SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}/mylib/src/${NEW_NAME}.c")
 if(EXISTS "${SOURCE_PATH}")
     file(READ "${SOURCE_PATH}" SOURCE_CONTENT)
     
-    string(REPLACE "#include \"${OLD_NAME}/${OLD_MODULE}.h\"" "#include \"${NEW_NAME}/${NEW_NAME}.h\"" SOURCE_CONTENT "${SOURCE_CONTENT}")
+    string(REPLACE "#include \"${OLD_MODULE}.h\"" "#include \"${NEW_NAME}.h\"" SOURCE_CONTENT "${SOURCE_CONTENT}")
     string(REGEX REPLACE "\\* @file[ \t]+${OLD_MODULE}\\.c" "* @file ${NEW_NAME}.c" SOURCE_CONTENT "${SOURCE_CONTENT}")
     
     file(WRITE "${SOURCE_PATH}" "${SOURCE_CONTENT}")
@@ -320,7 +289,7 @@ set(TEST_PATH "${CMAKE_CURRENT_LIST_DIR}/test/unit/test_${NEW_NAME}.c")
 if(EXISTS "${TEST_PATH}")
     file(READ "${TEST_PATH}" TEST_CONTENT)
     
-    string(REPLACE "#include \"${OLD_NAME}/${OLD_MODULE}.h\"" "#include \"${NEW_NAME}/${NEW_NAME}.h\"" TEST_CONTENT "${TEST_CONTENT}")
+    string(REPLACE "#include \"${OLD_MODULE}.h\"" "#include \"${NEW_NAME}.h\"" TEST_CONTENT "${TEST_CONTENT}")
     string(REGEX REPLACE "\\* @file[ \t]+test_${OLD_MODULE}\\.c" "* @file test_${NEW_NAME}.c" TEST_CONTENT "${TEST_CONTENT}")
     
     file(WRITE "${TEST_PATH}" "${TEST_CONTENT}")
@@ -360,52 +329,6 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.vscode/launch.json")
     message("  - Updated .vscode/launch.json")
 endif()
 
-# Update config template file
-set(CONFIG_TEMPLATE_PATH "${CMAKE_CURRENT_LIST_DIR}/config/${NEW_NAME}_config.h.template")
-if(EXISTS "${CONFIG_TEMPLATE_PATH}")
-    file(READ "${CONFIG_TEMPLATE_PATH}" CONFIG_TEMPLATE_CONTENT)
-    
-    # Update header guard
-    string(TOUPPER "${OLD_MODULE}" OLD_MODULE_UPPER)
-    string(TOUPPER "${NEW_NAME}" NEW_CONFIG_UPPER)
-    string(REPLACE "${OLD_MODULE_UPPER}_CONFIG_H" "${NEW_CONFIG_UPPER}_CONFIG_H" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
-    
-    # Update file name references in comments
-    string(REPLACE "${OLD_MODULE}_config.h" "${NEW_NAME}_config.h" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
-    
-    # Update library name references
-    string(REPLACE "${OLD_MODULE}" "${NEW_NAME}" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
-    
-    # Update macro prefixes (e.g., MYLIB_DIV_BY_ZERO_RETURN -> NEWNAME_DIV_BY_ZERO_RETURN)
-    string(REPLACE "${OLD_MODULE_UPPER}_" "${NEW_CONFIG_UPPER}_" CONFIG_TEMPLATE_CONTENT "${CONFIG_TEMPLATE_CONTENT}")
-    
-    file(WRITE "${CONFIG_TEMPLATE_PATH}" "${CONFIG_TEMPLATE_CONTENT}")
-    message("  - Updated ${CONFIG_TEMPLATE_PATH}")
-endif()
-
-# Update actual config file
-set(CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}/cfg/${NEW_NAME}_config.h")
-if(EXISTS "${CONFIG_PATH}")
-    file(READ "${CONFIG_PATH}" CONFIG_CONTENT)
-    
-    # Update header guard
-    string(TOUPPER "${OLD_MODULE}" OLD_MODULE_UPPER)
-    string(TOUPPER "${NEW_NAME}" NEW_CONFIG_UPPER)
-    string(REPLACE "${OLD_MODULE_UPPER}_CONFIG_H" "${NEW_CONFIG_UPPER}_CONFIG_H" CONFIG_CONTENT "${CONFIG_CONTENT}")
-    
-    # Update file name references in comments
-    string(REPLACE "${OLD_MODULE}_config.h" "${NEW_NAME}_config.h" CONFIG_CONTENT "${CONFIG_CONTENT}")
-    
-    # Update library name references
-    string(REPLACE "${OLD_MODULE}" "${NEW_NAME}" CONFIG_CONTENT "${CONFIG_CONTENT}")
-    
-    # Update macro prefixes (e.g., MYLIB_DIV_BY_ZERO_RETURN -> NEWNAME_DIV_BY_ZERO_RETURN)
-    string(REPLACE "${OLD_MODULE_UPPER}_" "${NEW_CONFIG_UPPER}_" CONFIG_CONTENT "${CONFIG_CONTENT}")
-    
-    file(WRITE "${CONFIG_PATH}" "${CONFIG_CONTENT}")
-    message("  - Updated ${CONFIG_PATH}")
-endif()
-
 # ==============================================================================
 # Clean build directory (avoid CMakeCache conflicts)
 # ==============================================================================
@@ -438,10 +361,10 @@ message("")
 message("Library renamed: '${OLD_NAME}' -> '${NEW_NAME}'")
 message("")
 message("What was changed:")
-message("  - project() declaration in CMakeLists.txt")
-message("  - Source file references in CMakeLists.txt")
+message("  - project() declaration in CMakeLists.txt and mylib/CMakeLists.txt")
+message("  - Source file references in mylib/CMakeLists.txt")
 message("  - TEST_MODULE_NAME in test/CMakeLists.txt")
-message("  - include/${OLD_NAME}/ directory -> include/${NEW_NAME}/")
+message("  - mylib/inc/${OLD_NAME}.h -> mylib/inc/${NEW_NAME}.h")
 message("  - Source files: ${OLD_MODULE}.* -> ${NEW_NAME}.*")
 message("  - #include statements updated")
 message("  - .vscode/launch.json test executable paths")
@@ -456,7 +379,7 @@ message("NEXT STEPS:")
 message("  1. Test the build:    cmake -DRUN_TESTS=ON -P build.cmake")
 message("  2. Review changes:    git status")
 message("  3. Update README.md with library-specific details")
-message("  4. Implement your functions in src/${NEW_NAME}.c")
+message("  4. Implement your functions in mylib/src/${NEW_NAME}.c")
 message("")
 message("NOTE: Build directories cleaned - fresh build will be performed")
 message("")

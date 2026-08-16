@@ -77,10 +77,7 @@ else()
         find_program(GCOV_EXECUTABLE
             NAMES gcov
             PATHS
-                "C:/devbin/mingw/mingw64/8.1.0/bin"
-                "C:/msys64/mingw64/bin"
-                "C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
-                "C:/Program Files/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
+                "C:/msys64/ucrt64/bin"
             NO_DEFAULT_PATH
         )
         
@@ -172,8 +169,10 @@ file(MAKE_DIRECTORY "${COVERAGE_DIR}")
 # Process coverage data for library sources
 message("[COVERAGE] Processing coverage data...")
 
-file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_LIST_DIR}/src/*.c")
-set(CMAKE_OBJ_DIR "${BUILD_DIR}/CMakeFiles/${PROJECT_NAME}.dir/src")
+file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_LIST_DIR}/mylib/src/*.c")
+
+# Find all .gcno files up-front (avoids assuming CMake's internal object-dir layout)
+file(GLOB_RECURSE ALL_GCNO_FILES "${BUILD_DIR}/*.gcno")
 
 set(TOTAL_LINES 0)
 set(EXECUTED_LINES 0)
@@ -185,7 +184,14 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     message("  Processing: ${FILE_NAME}")
     
     # Find corresponding .gcno file
-    file(GLOB GCNO_FILE "${CMAKE_OBJ_DIR}/${FILE_NAME}.gcno")
+    set(GCNO_FILE "")
+    foreach(CANDIDATE_GCNO ${ALL_GCNO_FILES})
+        get_filename_component(CANDIDATE_GCNO_NAME ${CANDIDATE_GCNO} NAME)
+        if(CANDIDATE_GCNO_NAME STREQUAL "${FILE_NAME}.gcno")
+            set(GCNO_FILE ${CANDIDATE_GCNO})
+            break()
+        endif()
+    endforeach()
     
     if(GCNO_FILE)
         get_filename_component(OBJ_DIR ${GCNO_FILE} DIRECTORY)
@@ -193,8 +199,8 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
         
         # Copy source file to object directory
         # gcov expects to find the source file at the path stored in .gcno
-        # which is relative (../src/mylib.c), but from the object directory
-        # that path doesn't work. Copying the source allows gcov to find it.
+        # (relative to the object directory), which won't resolve as-is;
+        # copying the source next to the .gcno lets gcov find it directly.
         file(COPY ${SOURCE_FILE} DESTINATION ${OBJ_DIR})
         
         # Run gcov from the object directory (like coverage.ps1 does)

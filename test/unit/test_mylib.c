@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "mylib/mylib.h"
+#include "mylib.h"
 
 /* Test fixtures */
 static int setup(void** state) {

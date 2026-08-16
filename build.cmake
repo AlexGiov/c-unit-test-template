@@ -5,16 +5,22 @@
 # Cross-platform: Works on Windows, Linux, macOS
 # ==============================================================================
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.24)
 
 # ==============================================================================
 # USAGE
 # ==============================================================================
 # 
+# This script is a thin wrapper around CMakePresets.json: the actual generator
+# and compiler are defined there (preset "ucrt64" on Windows, "linux-gcc" on
+# Linux). Use -DPRESET=<name> to force a specific preset.
+#
 # SYNTAX:
 #   cmake [options] -P build.cmake
 #
 # OPTIONS (set via -D flag BEFORE -P):
+#   -DPRESET=<name>          Force a specific CMakePresets.json preset
+#                            Default: ucrt64 (Windows) / linux-gcc (Linux)
 #   -DBUILD_TYPE=<type>      Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)
 #                            Default: Debug
 #   -DCLEAN=ON               Clean build directory before building
@@ -31,6 +37,10 @@ cmake_minimum_required(VERSION 3.16)
 #   cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake        # Build with coverage
 #   cmake -DBUILD_TYPE=Release -P build.cmake                # Build in Release mode
 #
+# EQUIVALENT MANUAL COMMANDS (no wrapper, direct preset usage):
+#   cmake --preset ucrt64        (Windows)   |  cmake --preset linux-gcc   (Linux)
+#   cmake --build --preset ucrt64            |  cmake --build --preset linux-gcc
+#
 # WORKFLOW:
 #   1. Build with coverage:  cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake
 #   2. Generate report:      cmake -P coverage.cmake -DGENERATE_HTML=ON
@@ -44,6 +54,8 @@ if(DEFINED HELP)
     message("  cmake [options] -P build.cmake")
     message("")
     message("OPTIONS:")
+    message("  -DPRESET=<name>          Force a specific CMakePresets.json preset")
+    message("                           Default: ucrt64 (Windows) / linux-gcc (Linux)")
     message("  -DBUILD_TYPE=<type>      Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)")
     message("                           Default: Debug")
     message("  -DCLEAN=ON               Clean build directory before building")
@@ -81,60 +93,15 @@ if(NOT BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
     message(FATAL_ERROR "[ERROR] Invalid BUILD_TYPE: ${BUILD_TYPE}")
 endif()
 
-# Require Ninja build system
-find_program(NINJA_EXECUTABLE ninja)
-
-if(NOT NINJA_EXECUTABLE)
-    message(FATAL_ERROR 
-        "[ERROR] Ninja build system not found.\n"
-        "  This template requires Ninja for optimal performance and cross-platform consistency.\n"
-        "\n"
-        "  Install Ninja:\n"
-        "    Windows:  choco install ninja  |  scoop install ninja\n"
-        "    Linux:    sudo apt install ninja-build  (Ubuntu/Debian)\n"
-        "              sudo dnf install ninja-build  (Fedora)\n"
-        "    macOS:    brew install ninja\n"
-        "\n"
-        "  Or download from: https://github.com/ninja-build/ninja/releases\n"
-    )
-endif()
-
-set(CMAKE_GENERATOR "Ninja")
-message("[INFO] Using Ninja generator")
-
-# Auto-detect GCC or use environment variable
-if(DEFINED ENV{CMAKE_C_COMPILER})
-    set(CMAKE_C_COMPILER "$ENV{CMAKE_C_COMPILER}")
-    message("[INFO] Using compiler from environment: ${CMAKE_C_COMPILER}")
-else()
-    # Try to find gcc in common locations
-    find_program(GCC_EXECUTABLE
-        NAMES gcc
-        PATHS
-            "C:/devbin/mingw/mingw64/8.1.0/bin"
-            "C:/msys64/mingw64/bin"
-            "C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
-            "C:/Program Files/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
-        NO_DEFAULT_PATH
-    )
-    
-    # Fallback to system PATH
-    if(NOT GCC_EXECUTABLE)
-        find_program(GCC_EXECUTABLE gcc)
-    endif()
-    
-    if(GCC_EXECUTABLE)
-        set(CMAKE_C_COMPILER "${GCC_EXECUTABLE}")
-        message("[INFO] Auto-detected GCC: ${CMAKE_C_COMPILER}")
+# Select the CMakePresets.json preset to use (generator/compiler are defined there)
+if(NOT DEFINED PRESET)
+    if(WIN32)
+        set(PRESET "ucrt64")
     else()
-        message(FATAL_ERROR "[ERROR] GCC not found. Install MinGW or set CMAKE_C_COMPILER environment variable")
+        set(PRESET "linux-gcc")
     endif()
 endif()
-
-# Use forward slashes for CMake even on Windows
-if(WIN32)
-    string(REPLACE "\\" "/" CMAKE_C_COMPILER "${CMAKE_C_COMPILER}")
-endif()
+message("[INFO] Using preset: ${PRESET}")
 
 # ==============================================================================
 # Helper Functions
@@ -197,33 +164,32 @@ if(DEFINED CLEAN OR DEFINED CLEAN_ONLY)
 endif()
 
 # Configure
-message("[CMAKE] Configuring project...")
+message("[CMAKE] Configuring project (preset: ${PRESET})...")
 
-set(CMAKE_ARGS
-    -G "${CMAKE_GENERATOR}"
-    -S "${CMAKE_CURRENT_LIST_DIR}"
-    -B "${CMAKE_CURRENT_LIST_DIR}/build"
+set(CONFIGURE_ARGS
+    --preset ${PRESET}
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
 )
 
-# Add compiler on Windows
-if(WIN32 AND CMAKE_C_COMPILER)
-    list(APPEND CMAKE_ARGS "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+# Allow overriding the compiler chosen by the preset (backward-compatible escape hatch)
+if(DEFINED ENV{CMAKE_C_COMPILER})
+    list(APPEND CONFIGURE_ARGS "-DCMAKE_C_COMPILER=$ENV{CMAKE_C_COMPILER}")
 endif()
 
 # Add coverage flag if requested
 if(DEFINED COVERAGE)
-    list(APPEND CMAKE_ARGS "-DENABLE_COVERAGE=ON")
+    list(APPEND CONFIGURE_ARGS "-DENABLE_COVERAGE=ON")
 endif()
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} ${CMAKE_ARGS}
+    COMMAND ${CMAKE_COMMAND} ${CONFIGURE_ARGS}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     RESULT_VARIABLE RESULT
     ERROR_VARIABLE ERROR_OUTPUT
 )
 
 if(NOT RESULT EQUAL 0)
-    message(FATAL_ERROR "[ERROR] CMake configuration failed!\n${ERROR_OUTPUT}")
+    message(FATAL_ERROR "[ERROR] CMake configuration failed (preset: ${PRESET})!\n${ERROR_OUTPUT}")
 endif()
 
 message("[CMAKE] Configuration complete")
@@ -233,12 +199,13 @@ message("")
 message("[BUILD] Compiling project...")
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} --build "${CMAKE_CURRENT_LIST_DIR}/build"
+    COMMAND ${CMAKE_COMMAND} --build --preset ${PRESET}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     RESULT_VARIABLE RESULT
 )
 
 if(NOT RESULT EQUAL 0)
-    message(FATAL_ERROR "[ERROR] Build failed!")
+    message(FATAL_ERROR "[ERROR] Build failed (preset: ${PRESET})!")
 endif()
 
 message("[BUILD] Build complete")
@@ -296,6 +263,7 @@ if(PROJECT_NAME)
 endif()
 
 message("Build Type:    ${BUILD_TYPE}")
+message("Preset:        ${PRESET}")
 message("Output:        bin/")
 message("Status:        SUCCESS")
 message("========================================")

@@ -3,7 +3,7 @@
  * @brief Implementation of mylib library
  */
 
-#include "mylib/mylib.h"
+#include "mylib.h"
 
 /* Optional configuration support */
 #ifdef __has_include

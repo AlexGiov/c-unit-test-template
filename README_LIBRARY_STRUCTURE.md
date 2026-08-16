@@ -13,8 +13,37 @@ The goal is to make the library:
 
 - Self-contained within its own repository
 - Easy to integrate into an application project
+
 - Simple to version
 - Clear to maintain over time
+
+---
+
+## How this template applies it
+
+In this repository the library root is `mylib/` (not the repository root itself),
+using `inc/` instead of `include/` as the public-header directory name. Unlike
+the `logger/` example below, the header lives directly under `inc/` (no extra
+namespace subfolder in the source tree - `mylib/` itself already plays that role):
+
+```text
+mylib/
+├─ inc/
+│  └─ mylib.h
+├─ src/
+│  └─ mylib.c
+├─ config/
+│  └─ mylib_config.h.template
+└─ CMakeLists.txt
+```
+
+`mylib/` is a fixed folder name, kept stable across renames of the library
+itself (`project()` name, `inc/<name>.h`, `src/<name>.c`): it is the exact
+prefix used by `git subtree split --prefix=mylib` to export the library into
+its own branch/repository, so its structure and location must stay predictable.
+The dev-only `cfg/` (real, non-template configuration) and `test/` stay outside
+`mylib/`, at the repository root, per the "Configuration: Template in Library,
+Actual File in App" rule below.
 
 ---
 
