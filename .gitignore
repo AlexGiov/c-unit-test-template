@@ -1,0 +1,10 @@
+# Build artifacts (e.g. when this folder is built standalone, cmake -S . -B build)
+build/
+bin/
+lib/
+coverage/
+*.o
+*.obj
+*.a
+*.so
+*.dll
