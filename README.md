@@ -230,6 +230,9 @@ like once the library moves to its own repository - subtree is the lower-frictio
 stepping stone: consumers don't need to learn submodule workflows, and history
 is squashed into a single commit per pull.
 
+If `lib-export` ever receives hotfixes directly (bypassing `main`), see
+[SYNC_LIB_EXPORT.md](SYNC_LIB_EXPORT.md) for the bidirectional sync workflow.
+
 ## 🛠️ Renaming the Template Library
 
 ### Simple Automatic Rename ✨ (Recommended)
