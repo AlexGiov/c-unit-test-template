@@ -132,7 +132,7 @@ is stable (see [Exporting `mylib/` with git subtree](#-exporting-mylib-with-git-
 unit_test_template/
 └── mylib/
     ├── CMakeLists.txt          # Self-contained: project(), target, install rules
-    ├── inc/                    # Public API headers
+    ├── include/                # Public API headers
     │   └── mylib.h             # Public interface
     ├── src/                    # Library implementation
     │   ├── mylib.c             # Implementation files
@@ -143,7 +143,7 @@ unit_test_template/
 
 **Why this structure?**
 - `mylib/` - Single root folder so the library can be split into its own branch/repo as-is
-- `mylib/inc/` - Public headers directly under `mylib/`, no extra namespace subfolder
+- `mylib/include/` - Public headers directly under `mylib/`, no extra namespace subfolder
 - `mylib/src/` - Contains implementation; installable for embedded integration
 - `mylib/src/private/` - Internal implementation details (excluded from install)
 - `mylib/config/` - Template for application-specific configuration
@@ -186,12 +186,12 @@ unit_test_template/
 - Test infrastructure stays in this repository, outside `mylib/`
 - `cfg/` contains the actual config used for testing (NOT installed, NOT part of `mylib/`)
 - `mylib/config/` contains templates for applications to copy and customize
-- Only `mylib/inc/`, `mylib/src/`, and `mylib/config/` templates are installed
+- Only `mylib/include/`, `mylib/src/`, and `mylib/config/` templates are installed
 - Application gets clean library without test dependencies
 
 ## 🌿 Lib-export branch
 
-This template has a branch used to share the library with consumer application. This branch was create with the following commands. Please see SYNC_LIB_EXPORT.md doc to further information how to use the library in the application and how to syncronize work with the library repository.
+This template has a branch used to share the library with consumer application. This branch was create with the following commands. Please see [GIT_WORKFLOW.md](GIT_WORKFLOW.md) doc to further information how to use the library in the application and how to syncronize work with the library repository.
 
 ```bash
 # In this repository: create a branch containing only mylib/ (rewritten history)
@@ -204,7 +204,7 @@ Because `mylib/CMakeLists.txt` is self-sufficient, the consuming app can either 
 
 This mirrors what `git submodule add <repo-url> external/mylib` would look like once the library moves to its own repository - subtree is the lower-friction stepping stone: consumers don't need to learn submodule workflows, and history is squashed into a single commit per pull.
 
-If `lib-export` ever receives hotfixes directly (bypassing `main`), see [SYNC_LIB_EXPORT.md](SYNC_LIB_EXPORT.md) for the bidirectional sync workflow.
+If `lib-export` ever receives hotfixes directly (bypassing `main`), see [GIT_WORKFLOW.md](GIT_WORKFLOW.md) for the bidirectional sync workflow.
 
 ## 🛠️ Renaming the Template Library
 
@@ -225,13 +225,13 @@ cmake -DCLEAN=ON -DRUN_TESTS=ON -P build.cmake
 
 # 4. Implement your library code
 #    - Edit mylib/src/sensor_driver.c
-#    - Edit mylib/inc/sensor_driver.h
+#    - Edit mylib/include/sensor_driver.h
 #    - Write tests in test/unit/test_sensor_driver.c
 ```
 
 **What the script does (simplified):**
 1. ✅ Changes `project(mylib)` → `project(sensor_driver)` in `CMakeLists.txt` and `mylib/CMakeLists.txt`
-2. ✅ Renames `mylib/inc/mylib.h` → `mylib/inc/sensor_driver.h`
+2. ✅ Renames `mylib/include/mylib.h` → `mylib/include/sensor_driver.h`
 3. ✅ Renames source files: `mylib.*` → `sensor_driver.*`
 4. ✅ Updates `#include` statements in C files
 5. ✅ Updates README.md references
@@ -267,8 +267,8 @@ project(your_library_name VERSION 1.0.0 LANGUAGES C)
 ### 2. Rename Directories and Files
 
 ```powershell
-# Rename the header (directly under mylib/inc/, no namespace subfolder)
-mv mylib/inc/mylib.h mylib/inc/your_library_name.h
+# Rename the header (directly under mylib/include/, no namespace subfolder)
+mv mylib/include/mylib.h mylib/include/your_library_name.h
 
 # Rename source files (if single-module library)
 mv mylib/src/mylib.c mylib/src/your_library_name.c
@@ -304,8 +304,8 @@ This template follows **CMake best practices** for relocatable packages:
 ### File Naming Convention
 
 For **single-module libraries** (most common):
-- Use: `mylib/src/${PROJECT_NAME}.c` and `mylib/inc/${PROJECT_NAME}.h`
-- Example: `sensor_driver` → `mylib/src/sensor_driver.c`, `mylib/inc/sensor_driver.h`
+- Use: `mylib/src/${PROJECT_NAME}.c` and `mylib/include/${PROJECT_NAME}.h`
+- Example: `sensor_driver` → `mylib/src/sensor_driver.c`, `mylib/include/sensor_driver.h`
 
 For **multi-module libraries**:
 - Use descriptive module names
@@ -356,7 +356,7 @@ cd my-library-tests
 
 ```bash
 # Add headers
-mylib/inc/your_module.h
+mylib/include/your_module.h
 
 # Add implementation
 mylib/src/your_module.c
@@ -458,7 +458,7 @@ cmake --install build
 
 # Installed structure:
 install/
-├── include/mylib/          # Public headers
+├── include/                # Public headers (flat, not namespaced)
 │   └── mylib.h
 ├── src/mylib/              # Source files (if INSTALL_SOURCES=ON)
 │   └── mylib.c
@@ -518,10 +518,14 @@ add_library(mylib
 )
 
 target_include_directories(mylib PUBLIC
-    ${VENDOR_DIR}/mylib/inc
+    ${VENDOR_DIR}/mylib/include
     ${CMAKE_SOURCE_DIR}/cfg  # Your config
 )
 ```
+
+Both options resolve `#include "mylib.h"` the same way: the installed `PUBLIC_HEADER` is
+placed flat in `include/` (not namespaced under `include/mylib/`), matching the layout used
+when the library is embedded/subtree'd directly.
 
 ### Versioning and Releases
 
@@ -585,10 +589,12 @@ git clone --branch v1.0.0 <repo-url> vendor/mylib
 
 ### Library Structure Best Practices
 
-This template follows professional C library organization:
+This template follows professional C library organization, validated against the
+[Pitchfork Layout (PFL)](https://github.com/vector-of-bool/pitchfork) conventions for C/C++
+projects (see `README_LIBRARY_STRUCTURE.md` for the full rationale and sources):
 
-- **Flat public headers** - `mylib/inc/` holds headers directly, no extra namespace subfolder in the source tree (install still namespaces them under `include/mylib/`)
-- **Separate public/private** - Only `mylib/inc/` is public API
+- **Flat public headers** - `mylib/include/` holds headers directly, no extra namespace subfolder in the source tree; the installed header is also kept flat (`include/mylib.h`), so `#include "mylib.h"` is identical whether the library is embedded/subtree'd or installed via `find_package`
+- **Separate public/private** - Only `mylib/include/` is public API
 - **Template config** - Library provides template, app provides actual config
 - **Optional configuration** - Library works with or without config file
 - **Source installation** - Enables embedded system integration
@@ -602,7 +608,7 @@ The template includes a simple `mylib` library as an example:
 ### Library Code
 
 ```c
-// mylib/inc/mylib.h
+// mylib/include/mylib.h
 int add(int a, int b);
 int subtract(int a, int b);
 int multiply(int a, int b);
@@ -672,13 +678,16 @@ The template includes a **minimal CMocka stub** for demonstration. For productio
 
 ### Test Organization
 
+Only `test/unit/` is scaffolded by this template; the others below are optional and
+created on demand as a project grows:
+
 ```
 test/
 ├── unit/           # Unit tests (functions, modules)
-├── integration/    # Integration tests (multiple modules)
-├── mocks/          # Mock implementations for dependencies
-├── fixtures/       # Test setup/teardown helpers
-└── data/           # Test data files
+├── integration/    # Integration tests (multiple modules) - create if needed
+├── mocks/          # Mock implementations for dependencies - create if needed
+├── fixtures/       # Test setup/teardown helpers - create if needed
+└── data/           # Test data files - create if needed
 ```
 
 ### Test Naming
@@ -745,7 +754,7 @@ jobs:
 
 - [CMake Configuration](cmake/README.md) - Build system details
 - [CMocka Integration](external/cmocka/README.md) - Test framework setup
-- [VS Code Setup](.vscode/README.md) - Editor integration
+- [Git Workflow](GIT_WORKFLOW.md) - Sharing the library via git subtree
 
 ## 🤝 Contributing
 
@@ -766,8 +775,8 @@ This template is provided as-is for use in your projects. Customize as needed.
 
 - [ ] Rename project in CMakeLists.txt
 - [ ] Update library name in all files
-- [ ] Add library source files to `src/`
-- [ ] Add public headers to `include/<libname>/`
+- [ ] Add library source files to `mylib/src/`
+- [ ] Add public headers to `mylib/include/`
 - [ ] Write unit tests in `test/unit/`
 - [ ] Build and run tests: `cmake -DRUN_TESTS=ON -P build.cmake`
 - [ ] Check coverage: `cmake -DCOVERAGE=ON -DRUN_TESTS=ON -P build.cmake && cmake -DGENERATE_HTML=ON -P coverage.cmake`
@@ -781,9 +790,3 @@ This template is provided as-is for use in your projects. Customize as needed.
 - [CMake Tutorial](https://cmake.org/cmake/help/latest/guide/tutorial/index.html)
 - [GCC Coverage (gcov)](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html)
 - [Unit Testing Best Practices](https://github.com/testdouble/contributing-tests/wiki/Test-Driven-Development)
-
----
-
-**Version**: 1.0.2  
-**Last Updated**: 2026-03-16  
-**Status**: ✅ Production Ready

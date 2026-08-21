@@ -52,7 +52,7 @@ target_link_libraries(test_${TEST_MODULE_NAME}
 
 target_include_directories(test_${TEST_MODULE_NAME}
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/mylib/inc
+        ${CMAKE_SOURCE_DIR}/mylib/include
         ${CMAKE_SOURCE_DIR}/test/fixtures
         ${CMAKE_SOURCE_DIR}/test/mocks
 )

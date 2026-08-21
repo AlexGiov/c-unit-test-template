@@ -4,11 +4,11 @@ This document contains information on how to use `git` to use `c-unit-test-templ
 
 # Cloning the repository
 
-Clone the github repository using c-unit-test-templete as template: from the c-unit-test-template repository home page on github select "using this tempalete -> Create new repository". Pay attention to select "use all branches".
+Clone the github repository using c-unit-test-template as template: from the c-unit-test-template repository home page on github select "Use this template -> Create new repository". Pay attention to select "use all branches".
 
- This is a preferred way rather than using `git clone <repo_url>`because using the template function on `github` do not copy the repository story.
+ This is a preferred way rather than using `git clone <repo_url>` because using the template function on `github` does not copy the repository history.
 
-Move to your new repository, compile the project, rename the library as needed, and check i the new created repository contains the branch `lib-export`
+Move to your new repository, compile the project, rename the library as needed, and check if the newly created repository contains the branch `lib-export`
 
 ```bash
 PS C:\wag\ag-libraries\ag-console> git branch -a
@@ -18,9 +18,9 @@ PS C:\wag\ag-libraries\ag-console> git branch -a
   remotes/origin/main
 ```
 
-**[If the branch exist]**
+**[If the branch exists]**
 
-If you have cloned in the manner way the reposistory you should see the branch lib-export.
+If you have cloned the repository in this way, you should see the branch lib-export.
 
 Connect remote branch with local: this means tracking
 
@@ -28,96 +28,96 @@ Connect remote branch with local: this means tracking
 git switch --track origin/lib-export
 ```
 
-**[if the branch do not exist]**
+**[If the branch doesn't exist]**
 
-If you forgotten to select " use all branches" cloning the repository through the `github` interface the branch `lib-export` won' t exists.
+If you forgot to select "use all branches" when cloning the repository through the `github` interface, the branch `lib-export` won't exist.
 
 Create a branch that point to the folder of the library. Use the following command.
 
 ```
 git subtree split --prefix=mylib -b lib-export	# create a LOCAL branch named lib-export that point to mylib
-git push origin lib-export						# to push the new branch to the remote repository orgin
+git push origin lib-export						# to push the new branch to the remote repository origin
 
-ATTENZIONE SE VUOI IL TRACKING DEVI FARE:
+NOTE: IF YOU WANT TRACKING, YOU MUST DO:
 
 git push -u origin lib-export
-dove -u è per settare l'upstream
+where -u sets the upstream
 ```
 
 NOTE: to delete a local branch you can use `git branch -D lib-export`
 
-# Collegare la libreria remota (git subtree)
+# Connecting the remote library (git subtree)
 
-Guida ai comandi per collegare la libreria remota  (branch `lib-export`) nella cartella `src/ag-hsm` nel progetto della consumer application usando `git subtree`.
+Guide to the commands for connecting the remote library (branch `lib-export`) into the `src/ag-hsm` folder of the consumer application project, using `git subtree`.
 
-A titolo di esempio usiamo il nome per la libreria pari a  [ag-hsm](https://github.com/AlexGiov/ag-hsm.git)
+As an example, we use the library name [ag-hsm](https://github.com/AlexGiov/ag-hsm.git).
 
-Con `git subtree` il codice della libreria viene copiato ("vendorizzato") dentro questo repository: non c'e' nessun `.git` annidato, chi clona il progetto non deve fare nessun passo aggiuntivo (a differenza dei submodule). In cambio, sincronizzare aggiornamenti e contributi richiede gli specifici comandi `git subtree`.
+With `git subtree` the library code is copied ("vendored") into this repository: there is no nested `.git`, so whoever clones the project doesn't need any extra step (unlike submodules). In exchange, synchronizing updates and contributions requires the specific `git subtree` commands.
 
-Esegui i comandi dalla root del progetto (`c:\wag\ag-libraries\ag-hsm-example-apps`).
+Run the commands from the project root (`c:\wag\ag-libraries\ag-hsm-example-apps`).
 
-## 0. Verifica preliminare (opzionale ma consigliata)
+## 0. Preliminary check (optional but recommended)
 
-Controlla che repository e branch siano raggiungibili con le tue credenziali, senza modificare nulla in locale:
+Check that the repository and branch are reachable with your credentials, without changing anything locally:
 
 ```sh
 git ls-remote https://github.com/AlexGiov/ag-hsm.git lib-export
 ```
 
-Se il comando restituisce un hash di commit, l'accesso funziona. Se chiede autenticazione o fallisce, va risolto prima di proseguire (es. credenziali/SSH key per quel repo).
+If the command returns a commit hash, access works. If it asks for authentication or fails, this needs to be resolved before proceeding (e.g. credentials/SSH key for that repo).
 
-## 1. Collegare il repo remoto
+## 1. Connect the remote repo
 
 ```sh
 git remote add ag-hsm https://github.com/AlexGiov/ag-hsm.git
 ```
 
-Aggiunge un secondo "remote" al repo locale (oltre a `origin`, che punta a `ag-hsm-example-apps`). Questo comando da solo **non scarica nulla**: crea solo un alias (`ag-hsm`) verso l'URL, usato dai comandi successivi.
+Adds a second "remote" to the local repo (in addition to `origin`, which points to `ag-hsm-example-apps`). This command alone **doesn't download anything**: it just creates an alias (`ag-hsm`) for the URL, used by the following commands.
 
-Per verificare che sia stato aggiunto:
+To verify it was added:
 
 ```sh
 git remote -v
 ```
 
-## 2. Collegare la cartella al branch remoto (una tantum)
+## 2. Connect the folder to the remote branch (one-time)
 
 ```sh
 git subtree add --prefix=src/ag-hsm ag-hsm lib-export --squash
 ```
 
-Questo comando:
+This command:
 
-- scarica il branch `lib-export` dal remote `ag-hsm`;
-- crea la cartella `src/ag-hsm` con dentro tutti i file del branch;
-- crea un commit locale che importa questi file nel repo principale.
+- downloads the `lib-export` branch from the `ag-hsm` remote;
+- creates the `src/ag-hsm` folder containing all the files from the branch;
+- creates a local commit that imports these files into the main repo.
 
-`--squash` comprime tutta la storia del branch `lib-export` in un solo commit di merge, cosi' la storia di questo progetto non si appesantisce con tutti i commit della libreria. Se in futuro serve conservare la storia completa della lib, si puo' ripetere l'operazione senza `--squash` (ma e' sconsigliato se non necessario).
+`--squash` compresses the entire history of the `lib-export` branch into a single merge commit, so this project's history doesn't get weighed down with all the library's commits. If the full library history needs to be preserved in the future, the operation can be repeated without `--squash` (but this is discouraged unless necessary).
 
-Questo comando va eseguito **una sola volta**: se `src/ag-hsm` esiste gia', `git subtree add` fallira' con un errore (usa invece `pull`, vedi sotto).
+This command must be run **only once**: if `src/ag-hsm` already exists, `git subtree add` will fail with an error (use `pull` instead, see below).
 
-## 3. Scaricare aggiornamenti dalla libreria remota
+## 3. Download updates from the remote library
 
-Ogni volta che il branch `lib-export` riceve nuovi commit e vuoi allinearti:
+Whenever the `lib-export` branch receives new commits and you want to align with it:
 
 ```sh
 git fetch ag-hsm lib-export
 git subtree pull --prefix=src/ag-hsm ag-hsm lib-export --squash
 ```
 
-Il `fetch` scarica solo i riferimenti/commit nel repo locale (senza toccare i file); il `subtree pull` fa il merge di quei cambiamenti dentro `src/ag-hsm`, mantenendo la storia squashata. Se ci sono conflitti tra modifiche locali e aggiornamenti remoti, vanno risolti come un normale merge Git (modifica i file in conflitto, poi `git add` + `git commit`).
+`fetch` only downloads the references/commits into the local repo (without touching the files); `subtree pull` merges those changes into `src/ag-hsm`, keeping the history squashed. If there are conflicts between local changes and remote updates, resolve them like a normal Git merge (edit the conflicting files, then `git add` + `git commit`).
 
-## 4. Pushare cambiamenti locali al branch remoto della libreria
+## 4. Push local changes to the library's remote branch
 
-Se modifichi file dentro `src/ag-hsm` e vuoi riportare le modifiche sul repo `ag-hsm` (branch `lib-export`):
+If you modify files inside `src/ag-hsm` and want to push the changes back to the `ag-hsm` repo (branch `lib-export`):
 
 ```sh
 git subtree push --prefix=src/ag-hsm ag-hsm lib-export
 ```
 
-Questo comando ricostruisce dalla cronologia locale i soli commit relativi a `src/ag-hsm` e li invia al branch `lib-export` del remote `ag-hsm`.
+This command reconstructs, from local history, only the commits related to `src/ag-hsm` and sends them to the `lib-export` branch of the `ag-hsm` remote.
 
-**Nota**: `subtree push` puo' essere lento su repo con molta storia, perche' ricalcola lo split della sotto-cartella ad ogni esecuzione. Un'alternativa piu' rapida e controllabile:
+**Note**: `subtree push` can be slow on repos with a lot of history, because it recomputes the sub-folder split on every run. A faster, more controllable alternative:
 
 ```sh
 git subtree split --prefix=src/ag-hsm -b tmp-ag-hsm-push
@@ -125,27 +125,27 @@ git push ag-hsm tmp-ag-hsm-push:lib-export
 git branch -D tmp-ag-hsm-push
 ```
 
-`split` crea un branch temporaneo locale (`tmp-ag-hsm-push`) contenente solo la storia di `src/ag-hsm`; lo si pusha sul branch remoto `lib-export` e poi lo si elimina in locale.
+`split` creates a temporary local branch (`tmp-ag-hsm-push`) containing only the history of `src/ag-hsm`; it is then pushed to the `lib-export` remote branch and deleted locally.
 
-**Importante**: fai sempre un pull (punto 3) prima di un push, per evitare che il tuo push diverga dagli aggiornamenti remoti e generi conflitti.
+**Important**: always do a pull (point 3) before a push, to avoid your push diverging from remote updates and generating conflicts.
 
-## Riepilogo comandi
+## Command summary
 
-| Operazione                       | Comando                                                      |
-| -------------------------------- | ------------------------------------------------------------ |
-| Verifica accesso remoto          | `git ls-remote https://github.com/AlexGiov/ag-hsm.git lib-export` |
-| Collega il remote                | `git remote add ag-hsm https://github.com/AlexGiov/ag-hsm.git` |
-| Collega la cartella (una tantum) | `git subtree add --prefix=src/ag-hsm ag-hsm lib-export --squash` |
-| Scarica aggiornamenti            | `git fetch ag-hsm lib-export` + `git subtree pull --prefix=src/ag-hsm ag-hsm lib-export --squash` |
-| Push modifiche locali            | `git subtree push --prefix=src/ag-hsm ag-hsm lib-export`     |
+| Operation                      | Command                                                       |
+| ------------------------------- | -------------------------------------------------------------- |
+| Verify remote access            | `git ls-remote https://github.com/AlexGiov/ag-hsm.git lib-export` |
+| Connect the remote               | `git remote add ag-hsm https://github.com/AlexGiov/ag-hsm.git` |
+| Connect the folder (one-time)   | `git subtree add --prefix=src/ag-hsm ag-hsm lib-export --squash` |
+| Download updates                 | `git fetch ag-hsm lib-export` + `git subtree pull --prefix=src/ag-hsm ag-hsm lib-export --squash` |
+| Push local changes                | `git subtree push --prefix=src/ag-hsm ag-hsm lib-export`     |
 
 # Working on the library: Syncing `main` and `lib-export` (bidirectional)
 
-The following chapter cover library synchronization between `main` branch and the `lib-export` branch. The `main` branch typically contains a tested new version of the library, while tha `lib-export` branch typically contains chagned from the consumer application.
+The following chapter covers library synchronization between the `main` branch and the `lib-export` branch. The `main` branch typically contains a tested new version of the library, while the `lib-export` branch typically contains changes from the consumer application.
 
-The following chapters rapresent a learning path for the following scenario : **hotfixes committed directly to `origin/lib-export`**, which then need to flow back into `main`, while `main`'s own changes to `mylib/` still need to flow out to `lib-export` — without ever rewriting `lib-export`'s published history (consumers rely on `git subtree add/pull`against it, so rewriting it would break their clones).
+The following chapters represent a learning path for the following scenario: **hotfixes committed directly to `origin/lib-export`**, which then need to flow back into `main`, while `main`'s own changes to `mylib/` still need to flow out to `lib-export` — without ever rewriting `lib-export`'s published history (consumers rely on `git subtree add/pull` against it, so rewriting it would break their clones).
 
-If you only ever change `mylib/` from `main` and never touch `lib-export`directly, you don't need this: the simple `git subtree split` + push from the
+If you only ever change `mylib/` from `main` and never touch `lib-export` directly, you don't need this: the simple `git subtree split` + push from the
 main README is enough.
 
 ## 1. What these git subtree commands actually do
@@ -157,6 +157,12 @@ main README is enough.
   point where `main`'s `mylib/` and `lib-export` last agreed." Without it, git has no memory of previous splits, and every future split looks like a
   brand-new, unrelated history — which is exactly what forces a rewrite (and a force-push) of `lib-export`. `--rejoin` is what keeps future syncs
   fast-forwardable.
+
+Note: unlike the consumer-side `git subtree add`/`pull` shown earlier in this document
+(which use `--squash` to keep the consumer's history light), the `merge` in step A below
+intentionally omits `--squash` — full-fidelity history is needed here so that future
+`git subtree split --rejoin` runs can recognize prior sync points and stay
+fast-forwardable.
 
 ## 2. Why order matters
 

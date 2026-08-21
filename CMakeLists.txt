@@ -3,7 +3,7 @@
 # ==============================================================================
 # Professional template for C library unit testing with CMocka
 #
-# The library itself lives entirely under mylib/ (mylib/inc, mylib/src,
+# The library itself lives entirely under mylib/ (mylib/include, mylib/src,
 # mylib/config, mylib/CMakeLists.txt) so that folder alone is self-sufficient
 # and can be exported to other repositories (e.g. via `git subtree split
 # --prefix=mylib`) without dragging along this test/dev infrastructure.
@@ -13,7 +13,7 @@
 #
 # The project() declaration below must stay in sync with the one in
 # mylib/CMakeLists.txt (name + version). Renaming: update both files, plus
-# mylib/inc/<old_name>/ -> mylib/inc/<new_name>/.
+# mylib/include/<old_name>/ -> mylib/include/<new_name>/.
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.10)

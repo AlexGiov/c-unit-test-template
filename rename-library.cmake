@@ -6,7 +6,7 @@
 # With the new CMake-based approach, renaming is much simpler:
 # - Change project() name in CMakeLists.txt AND mylib/CMakeLists.txt (both must
 #   stay in sync, see mylib/CMakeLists.txt header comment)
-# - Rename mylib/inc/ directory
+# - Rename mylib/include/ directory
 # - Rename source files (optional, recommended for single-module libraries)
 # - Update #include statements
 # - Update README references
@@ -34,7 +34,7 @@ cmake_minimum_required(VERSION 3.16)
 #
 # WHAT IT DOES (Simplified with CMake variables):
 #   1. Updates project() name in CMakeLists.txt and mylib/CMakeLists.txt
-#   2. Renames mylib/inc/mylib.h -> mylib/inc/<NEW_NAME>.h
+#   2. Renames mylib/include/mylib.h -> mylib/include/<NEW_NAME>.h
 #   3. Renames source files (recommended for single-module)
 #   4. Updates #include statements and README.md references
 #
@@ -61,7 +61,7 @@ if(DEFINED HELP)
     message("")
     message("WHAT IT DOES (Simplified with CMake variables):")
     message("  1. Updates project() name in CMakeLists.txt and mylib/CMakeLists.txt")
-    message("  2. Renames mylib/inc/mylib.h -> mylib/inc/<NEW_NAME>.h")
+    message("  2. Renames mylib/include/mylib.h -> mylib/include/<NEW_NAME>.h")
     message("  3. Renames source files (recommended for single-module)")
     message("  4. Updates #include statements and README.md references")
     message("")
@@ -201,9 +201,9 @@ string(REGEX REPLACE
     "${MYLIB_CMAKE}"
 )
 
-# Update source/header references (inc/oldfile.h -> inc/newfile.h, flat - no namespace subfolder)
+# Update source/header references (include/oldfile.h -> include/newfile.h, flat - no namespace subfolder)
 string(REPLACE "src/${OLD_MODULE}.c" "src/${NEW_NAME}.c" MYLIB_CMAKE "${MYLIB_CMAKE}")
-string(REPLACE "inc/${OLD_MODULE}.h" "inc/${NEW_NAME}.h" MYLIB_CMAKE "${MYLIB_CMAKE}")
+string(REPLACE "include/${OLD_MODULE}.h" "include/${NEW_NAME}.h" MYLIB_CMAKE "${MYLIB_CMAKE}")
 
 file(WRITE "${CMAKE_CURRENT_LIST_DIR}/mylib/CMakeLists.txt" "${MYLIB_CMAKE}")
 message("  - Changed project(${OLD_NAME}) -> project(${NEW_NAME}) in mylib/CMakeLists.txt")
@@ -214,12 +214,12 @@ message("    All CMake targets auto-update via \${PROJECT_NAME}!")
 # ==============================================================================
 message("[2/4] Renaming source and header files...")
 
-# Rename header file (flat, directly under mylib/inc/ - no namespace subfolder)
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${OLD_MODULE}.h")
-    message("  mylib/inc/${OLD_MODULE}.h -> ${NEW_NAME}.h")
+# Rename header file (flat, directly under mylib/include/ - no namespace subfolder)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/mylib/include/${OLD_MODULE}.h")
+    message("  mylib/include/${OLD_MODULE}.h -> ${NEW_NAME}.h")
     file(RENAME 
-        "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${OLD_MODULE}.h"
-        "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${NEW_NAME}.h"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/include/${OLD_MODULE}.h"
+        "${CMAKE_CURRENT_LIST_DIR}/mylib/include/${NEW_NAME}.h"
     )
 endif()
 
@@ -257,7 +257,7 @@ message("[3/4] Configuration files: kept as mylib_config.h (see mylib.h #include
 message("[4/4] Updating file contents...")
 
 # Update header file
-set(HEADER_PATH "${CMAKE_CURRENT_LIST_DIR}/mylib/inc/${NEW_NAME}.h")
+set(HEADER_PATH "${CMAKE_CURRENT_LIST_DIR}/mylib/include/${NEW_NAME}.h")
 if(EXISTS "${HEADER_PATH}")
     file(READ "${HEADER_PATH}" HEADER_CONTENT)
     
@@ -364,7 +364,7 @@ message("What was changed:")
 message("  - project() declaration in CMakeLists.txt and mylib/CMakeLists.txt")
 message("  - Source file references in mylib/CMakeLists.txt")
 message("  - TEST_MODULE_NAME in test/CMakeLists.txt")
-message("  - mylib/inc/${OLD_NAME}.h -> mylib/inc/${NEW_NAME}.h")
+message("  - mylib/include/${OLD_NAME}.h -> mylib/include/${NEW_NAME}.h")
 message("  - Source files: ${OLD_MODULE}.* -> ${NEW_NAME}.*")
 message("  - #include statements updated")
 message("  - .vscode/launch.json test executable paths")

@@ -7,7 +7,7 @@
 # the test/dev infrastructure that lives in the parent repository.
 #
 # To rename this library, change the project name below and rename:
-#   - inc/mylib.h -> inc/<new_name>.h
+#   - include/mylib.h -> include/<new_name>.h
 #   - src/mylib.c -> src/<new_name>.c (if using single-module convention)
 #
 # All CMake targets, exports, and install paths automatically follow the new
@@ -52,14 +52,14 @@ set(${PROJECT_NAME_UPPER}_SOURCES
 )
 
 set(${PROJECT_NAME_UPPER}_HEADERS
-    inc/mylib.h
+    include/mylib.h
 )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME_UPPER}_SOURCES} ${${PROJECT_NAME_UPPER}_HEADERS})
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${${PROJECT_NAME_UPPER}_CONFIG_DIR}>
         $<INSTALL_INTERFACE:include>
     PRIVATE
@@ -91,12 +91,13 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
+    # Flat, not namespaced: keeps #include "mylib.h" identical for embedded/subtree and installed use
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 if(INSTALL_SOURCES)
     install(DIRECTORY src/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/src/${PROJECT_NAME}
+        DESTINATION src/${PROJECT_NAME}
         FILES_MATCHING PATTERN "*.c"
         PATTERN "private" EXCLUDE
     )
@@ -104,7 +105,7 @@ if(INSTALL_SOURCES)
 endif()
 
 install(DIRECTORY config/
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/config/${PROJECT_NAME}
+    DESTINATION config/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.template"
 )
 
