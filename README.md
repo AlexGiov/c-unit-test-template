@@ -67,11 +67,8 @@ cmake --preset linux-gcc
 cmake --build --preset linux-gcc
 ```
 
-The preset to use depends on the platform, not on personal choice: `ucrt64` is only
-valid on Windows and `linux-gcc` only on Linux (enforced via the `condition` field
-in `CMakePresets.json`), so the commands above are not interchangeable between OSes.
-To override the compiler location, create a local (untracked) `CMakeUserPresets.json`
-that inherits from one of these presets.
+The preset to use depends on the platform, not on personal choice: `ucrt64` is only valid on Windows and `linux-gcc` only on Linux (enforced via the `condition` field in `CMakePresets.json`), so the commands above are not interchangeable between OSes.
+To override the compiler location, create a local (untracked) `CMakeUserPresets.json` that inherits from one of these presets.
 
 **Cross-Platform wrapper (works identically on Windows, Linux, macOS):**
 
@@ -105,9 +102,7 @@ Generator and compiler are defined declaratively in `CMakePresets.json`:
 
 **Custom Configuration (Advanced):**
 
-To point to a different compiler location, create a local `CMakeUserPresets.json`
-(not tracked by Git) that inherits from `ucrt64`/`linux-gcc`, or override via
-environment variable (still supported as an escape hatch by `build.cmake`):
+To point to a different compiler location, create a local `CMakeUserPresets.json` (not tracked by Git) that inherits from `ucrt64`/`linux-gcc`, or override via environment variable (still supported as an escape hatch by `build.cmake`):
 ```powershell
 # Windows
 $env:CMAKE_C_COMPILER = "C:\custom\path\gcc.exe"
@@ -126,15 +121,12 @@ export GCOV_EXECUTABLE=/usr/bin/gcov
 
 ## 📁 Directory Structure
 
-The template is organized into two main parts: the **`mylib/` library** (self-contained,
-deliverable) and the **development infrastructure** (testing & tooling) around it.
+The template is organized into two main parts: the **`mylib/` library** (self-contained, deliverable) and the **development infrastructure** (testing & tooling) around it.
 
 ### Core Library: `mylib/` (Installable, exportable)
 
-Everything the library needs lives under a single root, `mylib/`, on purpose:
-this is the folder that gets exported to other repositories once the library
-is stable (see [Exporting `mylib/` with git subtree](#-exporting-mylib-with-git-subtree)
-below). It has its own `CMakeLists.txt` and configures/builds standalone.
+Everything the library needs lives under a single root, `mylib/`, on purpose: this is the folder that gets exported to other repositories once the library
+is stable (see [Exporting `mylib/` with git subtree](#-exporting-mylib-with-git-subtree) below). It has its own `CMakeLists.txt` and configures/builds standalone.
 
 ```
 unit_test_template/
@@ -190,48 +182,29 @@ unit_test_template/
 ```
 
 **Development vs Production:**
+
 - Test infrastructure stays in this repository, outside `mylib/`
 - `cfg/` contains the actual config used for testing (NOT installed, NOT part of `mylib/`)
 - `mylib/config/` contains templates for applications to copy and customize
 - Only `mylib/inc/`, `mylib/src/`, and `mylib/config/` templates are installed
 - Application gets clean library without test dependencies
 
-## 🌿 Exporting `mylib/` with git subtree
+## 🌿 Lib-export branch
 
-Once the library is stable, `mylib/` can be extracted into its own branch and
-consumed from application repositories, without waiting for a full repository split:
+This template has a branch used to share the library with consumer application. This branch was create with the following commands. Please see SYNC_LIB_EXPORT.md doc to further information how to use the library in the application and how to syncronize work with the library repository.
 
 ```bash
 # In this repository: create a branch containing only mylib/ (rewritten history)
 git subtree split --prefix=mylib -b lib-export
 git push origin lib-export
 
-# Later, after new commits land on main touching mylib/: re-run the same split.
-# git subtree's cache lets it fast-forward lib-export to the new state - no
-# need to delete/recreate the branch.
-git subtree split --prefix=mylib -b lib-export
-git push origin lib-export
-
-# In the consuming application repository: pull that branch as a subtree
-git subtree add --prefix=external/mylib <this-repo-url> lib-export --squash
-
-# Later, to pull updates:
-git fetch <this-repo-url> lib-export
-git subtree pull --prefix=external/mylib <this-repo-url> lib-export --squash
 ```
 
-Because `mylib/CMakeLists.txt` is self-sufficient, the consuming app can either
-`add_subdirectory(external/mylib)` or configure/build it standalone. Point
-`MYLIB_CONFIG_DIR` at the app's own `cfg/` **before** `add_subdirectory(mylib)`
-to supply the real `mylib_config.h` (see `mylib/CMakeLists.txt` comments).
+Because `mylib/CMakeLists.txt` is self-sufficient, the consuming app can either `add_subdirectory(external/mylib)` or configure/build it standalone. Point `MYLIB_CONFIG_DIR` at the app's own `cfg/` **before** `add_subdirectory(mylib)` to supply the real `mylib_config.h` (see `mylib/CMakeLists.txt` comments).
 
-This mirrors what `git submodule add <repo-url> external/mylib` would look
-like once the library moves to its own repository - subtree is the lower-friction
-stepping stone: consumers don't need to learn submodule workflows, and history
-is squashed into a single commit per pull.
+This mirrors what `git submodule add <repo-url> external/mylib` would look like once the library moves to its own repository - subtree is the lower-friction stepping stone: consumers don't need to learn submodule workflows, and history is squashed into a single commit per pull.
 
-If `lib-export` ever receives hotfixes directly (bypassing `main`), see
-[SYNC_LIB_EXPORT.md](SYNC_LIB_EXPORT.md) for the bidirectional sync workflow.
+If `lib-export` ever receives hotfixes directly (bypassing `main`), see [SYNC_LIB_EXPORT.md](SYNC_LIB_EXPORT.md) for the bidirectional sync workflow.
 
 ## 🛠️ Renaming the Template Library
 

@@ -2,23 +2,17 @@
 
 ## 2026-08 Update: CMakePresets.json + MSYS2 UCRT64
 
-Toolchain selection moved from hardcoded/auto-detected paths inside `build.cmake`
-into a versioned `CMakePresets.json` with OS-conditioned presets:
+Toolchain selection moved from hardcoded/auto-detected paths inside `build.cmake` into a versioned `CMakePresets.json` with OS-conditioned presets:
 
-- `ucrt64` (Windows only, via `condition.hostSystemName`): GCC/Ninja from
-  **MSYS2 UCRT64**, the environment MSYS2 recommends by default. MSYS2's
-  MINGW64 environment (previously used here, GCC 8.1.0) has since been
-  deprecated upstream.
+- `ucrt64` (Windows only, via `condition.hostSystemName`): GCC/Ninja from **MSYS2 UCRT64**, the environment MSYS2 recommends by default. MSYS2's
+  MINGW64 environment (previously used here, GCC 8.1.0) has since been deprecated upstream.
 - `linux-gcc` (Linux only): system GCC/Ninja.
 
-`build.cmake` is now a thin wrapper: it auto-selects `ucrt64`/`linux-gcc` based
-on the host OS and runs `cmake --preset <name>` / `cmake --build --preset <name>`.
-This is what makes the previous `--preset ucrt64` habit meaningless on
-Linux/macOS solved cleanly: the preset itself refuses to activate on the wrong
+`build.cmake` is now a thin wrapper: it auto-selects `ucrt64`/`linux-gcc` based on the host OS and runs `cmake --preset <name>` / `cmake --build --preset <name>`.
+This is what makes the previous `--preset ucrt64` habit meaningless on Linux/macOS solved cleanly: the preset itself refuses to activate on the wrong
 OS instead of silently misconfiguring the build.
 
-The old `cmake/toolchain-mingw.cmake` file (unused, hardcoded to an obsolete
-MinGW 8.1.0 install) was removed as part of this change.
+The old `cmake/toolchain-mingw.cmake` file (unused, hardcoded to an obsolete MinGW 8.1.0 install) was removed as part of this change.
 
 ## ✅ Modern Cross-Platform Architecture
 
