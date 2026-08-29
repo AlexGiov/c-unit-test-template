@@ -19,7 +19,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(mylib
-    VERSION 3.1.0
+    VERSION 3.2.0
     DESCRIPTION "Example library with unit testing template"
     LANGUAGES C
 )
